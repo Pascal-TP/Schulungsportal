@@ -356,6 +356,51 @@ async function loadAdminUsers() {
   });
 }
 
+ async function loadAdminTrainings() {
+  const list = document.getElementById("admin-training-list");
+  list.innerHTML = "";
+
+  const trainings = await getAllTrainings();
+
+  if (trainings.length === 0) {
+    list.appendChild(createInfoCard({
+      title: "Keine Schulungen vorhanden",
+      lines: ["In Firestore wurden noch keine Schulungen angelegt."]
+    }));
+    return;
+  }
+
+  trainings.forEach((training) => {
+    list.appendChild(createInfoCard({
+      title: training.title,
+      lines: [
+        `URL: ${training.url || "-"}`,
+        `Bereiche: ${(training.bereiche || []).join(", ") || "alle"}`
+      ],
+      status: training.active === false ? "inaktiv" : "aktiv"
+    }));
+  });
+}
+
+async function routeUser(profile) {
+  showTopbarForLoggedInUser(profile);
+
+  if (profile.role === "employee") {
+    showPage("page-employee");
+    await renderEmployeeView(profile);
+    return;
+  }
+
+  if (profile.role === "supervisor") {
+    showPage("page-supervisor");
+    await renderSupervisorView(profile);
+    return;
+  }
+
+  if (profile.role === "admin") {
+    showPage("page-admin");
+    await renderAdminView(profile);
+    return;
   }
 
   throw new Error("Unbekannte Rolle im Benutzerprofil.");
