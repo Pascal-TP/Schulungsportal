@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Schulungsportal</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <img src="assets/logo.png" alt="TP Holding / NDF / TGA" class="top-logo" />
+      <div class="topbar-right">
+        <span id="user-role-badge" class="role-badge hidden"></span>
+        <button id="logout-btn" class="secondary-btn hidden">Abmelden</button>
+      </div>
+    </header>
+
+    <main class="main-content">
+      <section id="page-login" class="page active-page">
+        <div class="hero-card login-card">
+          <div class="hero-overlay">
+            <h1>Sicherheitsschulungen für Mitarbeiter</h1>
+            <p>
+              Bitte melden Sie sich mit Ihrer E-Mail-Adresse und Ihrem Passwort an.
+            </p>
+
+            <form id="login-form" class="form-card">
+              <label for="login-email">E-Mail</label>
+              <input type="email" id="login-email" placeholder="name@firma.de" required />
+
+              <label for="login-password">Passwort</label>
+              <input type="password" id="login-password" placeholder="Passwort" required />
+
+              <button type="submit" class="primary-btn">Anmelden</button>
+              <button type="button" id="reset-password-btn" class="secondary-btn">
+                Passwort zurücksetzen
+              </button>
+
+              <p id="login-message" class="message-box"></p>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      <section id="page-employee" class="page">
+        <div class="page-header">
+          <h2>Mein Schulungsbereich</h2>
+          <p id="employee-welcome"></p>
+        </div>
+
+        <div class="dashboard-grid">
+          <div class="content-card">
+            <h3>Meine Schulungen</h3>
+            <div id="employee-training-list" class="card-list"></div>
+          </div>
+
+          <div class="content-card">
+            <h3>Mein Bearbeitungsstand</h3>
+            <div id="employee-progress-list" class="card-list"></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="page-supervisor" class="page">
+        <div class="page-header">
+          <h2>Bereich Vorgesetzte</h2>
+          <p id="supervisor-welcome"></p>
+        </div>
+
+        <div class="dashboard-grid">
+          <div class="content-card full-span">
+            <h3>Meine Schulungen</h3>
+            <div id="supervisor-own-training-list" class="card-list"></div>
+          </div>
+
+          <div class="content-card">
+            <h3>Meine Mitarbeiter</h3>
+            <div id="supervisor-employee-list" class="card-list"></div>
+          </div>
+
+          <div class="content-card">
+            <h3>Bearbeitungsstand meiner Mitarbeiter</h3>
+            <div id="supervisor-progress-list" class="card-list"></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="page-admin" class="page">
+        <div class="page-header">
+          <h2>Adminbereich</h2>
+          <p id="admin-welcome"></p>
+        </div>
+
+        <div class="dashboard-grid">
+          <div class="content-card full-span">
+            <h3>Meine Schulungen</h3>
+            <div id="admin-own-training-list" class="card-list"></div>
+          </div>
+
+          <div class="content-card">
+            <h3>Benutzerverwaltung</h3>
+            <div class="button-stack">
+              <button class="primary-btn" id="btn-load-users">Benutzer laden</button>
+              <button class="secondary-btn" disabled>Benutzer anlegen (nächster Schritt)</button>
+              <button class="secondary-btn" disabled>Rollen zuweisen (nächster Schritt)</button>
+            </div>
+            <div id="admin-user-list" class="card-list"></div>
+          </div>
+
+          <div class="content-card">
+            <h3>Schulungsverwaltung</h3>
+            <div class="button-stack">
+              <button class="primary-btn" id="btn-load-trainings">Schulungen laden</button>
+              <button class="secondary-btn" disabled>Schulung anlegen (nächster Schritt)</button>
+              <button class="secondary-btn" disabled>Bereichen zuordnen (nächster Schritt)</button>
+            </div>
+            <div id="admin-training-list" class="card-list"></div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

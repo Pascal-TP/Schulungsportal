@@ -1,0 +1,89 @@
+:root {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.content-card {
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 22px;
+  border: 1px solid var(--border);
+}
+
+.full-span {
+  grid-column: 1 / -1;
+}
+
+.content-card h3 {
+  margin-top: 0;
+  margin-bottom: 16px;
+}
+
+.card-list {
+  display: grid;
+  gap: 12px;
+}
+
+.list-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 16px;
+}
+
+.list-card h4 {
+  margin: 0 0 8px;
+  font-size: 1.05rem;
+}
+
+.list-card p {
+  margin: 4px 0;
+  color: var(--muted);
+}
+
+.list-card .status {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  background: #eef2f7;
+}
+
+.button-stack {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.inline-btn {
+  margin-top: 10px;
+  width: auto;
+}
+
+@media (max-width: 900px) {
+  .topbar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .topbar-right {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .hero-overlay {
+    padding: 24px;
+  }
+
+  .main-content {
+    padding: 16px;
+  }
+}
