@@ -1,4 +1,5 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import { getFunctions } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js";
 import {
   getAuth,
   signInWithEmailAndPassword,
@@ -17,11 +18,19 @@ import {
   updateDoc,
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { firebaseConfig } from "./firebase-config.js";
+import { firebaseConfig, blazeConfig } from "./firebase-config.js";
 
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
+const portalApp = getApps().some(app => app.name === "portal")
+  ? getApp("portal")
+  : initializeApp(firebaseConfig, "portal");
+
+const blazeApp = getApps().some(app => app.name === "blaze")
+  ? getApp("blaze")
+  : initializeApp(blazeConfig, "blaze");
+
+const auth = getAuth(portalApp);
+const db = getFirestore(portalApp);
+const functions = getFunctions(blazeApp);
 
 const loginForm = document.getElementById("login-form");
 const loginEmail = document.getElementById("login-email");
