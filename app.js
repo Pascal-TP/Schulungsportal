@@ -384,7 +384,7 @@ async function renderSupervisorView(profile) {
     ownTrainingList.appendChild(createInfoCard({
       title: training.title,
       lines: [
-        `Bereiche: ${(training.bereiche || []).join(", ") || "alle"}`,
+        
         `Link: ${training.url || "kein Link hinterlegt"}`
       ],
       buttonText: "Schulung öffnen",
