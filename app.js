@@ -16,6 +16,7 @@ import {
   query,
   where,
   updateDoc,
+  setDoc,
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { firebaseConfig, blazeConfig } from "./firebase-config.js";
@@ -210,8 +211,17 @@ async function renderEmployeeView(profile) {
       ],
       status,
       buttonText: "Schulung öffnen",
-      onClick: () => {
-        if (training.url) window.open(training.url, "_blank", "noopener,noreferrer");
+      onClick: async () => {
+        try {
+          await markTrainingOpened(profile.id, training);
+          if (training.url) {
+            window.open(training.url, "_blank", "noopener,noreferrer");
+          }
+          await renderEmployeeView(profile);
+        } catch (error) {
+          console.error(error);
+          alert("Bearbeitungsstand konnte nicht gespeichert werden.");
+        }
       }
     }));
   });
@@ -233,6 +243,22 @@ async function renderEmployeeView(profile) {
       status: entry.status || "offen"
     }));
   });
+}
+
+async function markTrainingOpened(userId, training) {
+  if (!userId || !training?.id) return;
+
+  const progressId = `${userId}_${training.id}`;
+  const progressRef = doc(db, "trainingProgress", progressId);
+
+  await setDoc(progressRef, {
+    userId,
+    trainingId: training.id,
+    trainingTitle: training.title || "Schulung",
+    status: "in_progress",
+    openedAt: serverTimestamp(),
+    completedAt: null
+  }, { merge: true });
 }
 
 async function getEmployeesForSupervisor(supervisorId) {
@@ -264,8 +290,17 @@ async function renderSupervisorView(profile) {
         `Link: ${training.url || "kein Link hinterlegt"}`
       ],
       buttonText: "Schulung öffnen",
-      onClick: () => {
-        if (training.url) window.open(training.url, "_blank", "noopener,noreferrer");
+      onClick: async () => {
+        try {
+          await markTrainingOpened(profile.id, training);
+          if (training.url) {
+            window.open(training.url, "_blank", "noopener,noreferrer");
+          }
+          await renderSupervisorView(profile);
+        } catch (error) {
+          console.error(error);
+          alert("Bearbeitungsstand konnte nicht gespeichert werden.");
+        }
       }
     }));
   });
@@ -352,8 +387,17 @@ async function renderAdminView(profile) {
         `Link: ${training.url || "kein Link hinterlegt"}`
       ],
       buttonText: "Schulung öffnen",
-      onClick: () => {
-        if (training.url) window.open(training.url, "_blank", "noopener,noreferrer");
+      onClick: async () => {
+        try {
+          await markTrainingOpened(profile.id, training);
+          if (training.url) {
+            window.open(training.url, "_blank", "noopener,noreferrer");
+          }
+          await renderAdminView(profile);
+        } catch (error) {
+          console.error(error);
+          alert("Bearbeitungsstand konnte nicht gespeichert werden.");
+        }
       }
     }));
   });
