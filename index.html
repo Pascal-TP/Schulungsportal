@@ -182,6 +182,7 @@
 
               <form id="create-training-form" class="form-card admin-form">
                 <label for="new-training-title">Titel</label>
+                <input type="hidden" id="edit-training-id" />
                 <input type="text" id="new-training-title" placeholder="Datenschutz" required />
 
                 <label for="new-training-url">Link zur Schulung</label>
@@ -221,7 +222,8 @@
                   <option value="false">inaktiv</option>
                 </select>
 
-                <button type="submit" class="primary-btn">Schulung anlegen</button>
+                <button type="submit" class="primary-btn" id="save-training-btn">Schulung anlegen</button>
+                <button type="button" class="secondary-btn" id="cancel-training-edit-btn">Bearbeitung abbrechen</button>
                 <p id="create-training-message" class="message-box"></p>
               </form>
 

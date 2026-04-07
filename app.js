@@ -16,6 +16,7 @@ import {
   query,
   where,
   updateDoc,
+  deleteDoc,
   setDoc,
   addDoc,
   serverTimestamp
@@ -45,7 +46,9 @@ const createUserForm = document.getElementById("create-user-form");
 const createUserMessage = document.getElementById("create-user-message");
 const createTrainingForm = document.getElementById("create-training-form");
 const createTrainingMessage = document.getElementById("create-training-message");
-
+const editTrainingIdInput = document.getElementById("edit-training-id");
+const saveTrainingBtn = document.getElementById("save-training-btn");
+const cancelTrainingEditBtn = document.getElementById("cancel-training-edit-btn");
 
 const pageIds = ["page-login", "page-employee", "page-supervisor", "page-admin"];
 let currentAuthUser = null;
@@ -235,7 +238,6 @@ async function renderEmployeeView(profile) {
       lines: [
         `Link: ${training.url || "kein Link hinterlegt"}`
       ],
-      status,
       buttonText: "Schulung öffnen",
       onClick: async () => {
         try {
@@ -547,19 +549,73 @@ async function loadAdminTrainings() {
   }
 
   trainings.forEach((training) => {
-    list.appendChild(createInfoCard({
-      title: training.title,
-      lines: [
-        `URL: ${training.url || "-"}`,
-        `Bereiche: ${(training.bereiche || []).join(", ") || "alle"}`
-      ],
-      status: training.active === false ? "inaktiv" : "aktiv"
-    }));
-  });
+  list.appendChild(createInfoCard({
+    title: training.title,
+    lines: [
+      `URL: ${training.url || "-"}`,
+      `Bereiche: ${(training.bereiche || []).join(", ") || "alle"}`
+    ],
+    status: training.active === false ? "inaktiv" : "aktiv",
+    buttonText: "Bearbeiten",
+    onClick: () => {
+      fillTrainingFormForEdit(training);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    },
+    secondaryButtonText: "Löschen",
+    onSecondaryClick: async () => {
+      const confirmed = confirm(`Soll die Schulung "${training.title}" wirklich gelöscht werden?`);
+      if (!confirmed) return;
+
+      try {
+        await deleteTrainingById(training.id);
+        await loadAdminTrainings();
+      } catch (error) {
+        console.error(error);
+        alert("Schulung konnte nicht gelöscht werden.");
+      }
+    }
+  }));
+});
 }
 
 async function createTrainingFromForm(formData) {
   await addDoc(collection(db, "trainings"), formData);
+}
+
+async function updateTrainingFromForm(trainingId, formData) {
+  await updateDoc(doc(db, "trainings", trainingId), formData);
+}
+
+async function deleteTrainingById(trainingId) {
+  await deleteDoc(doc(db, "trainings", trainingId));
+}
+
+function resetTrainingForm() {
+  if (!createTrainingForm) return;
+
+  createTrainingForm.reset();
+  if (editTrainingIdInput) editTrainingIdInput.value = "";
+  if (saveTrainingBtn) saveTrainingBtn.textContent = "Schulung anlegen";
+  setCreateTrainingMessage("");
+}
+
+function fillTrainingFormForEdit(training) {
+  if (!training) return;
+
+  if (editTrainingIdInput) editTrainingIdInput.value = training.id;
+  document.getElementById("new-training-title").value = training.title || "";
+  document.getElementById("new-training-url").value = training.url || "";
+  document.getElementById("new-training-active").value = String(training.active !== false);
+
+  document
+    .querySelectorAll('#new-training-bereiche input[type="checkbox"]')
+    .forEach((checkbox) => {
+      const value = parseInt(checkbox.value, 10);
+      checkbox.checked = Array.isArray(training.bereiche) && training.bereiche.includes(value);
+    });
+
+  if (saveTrainingBtn) saveTrainingBtn.textContent = "Schulung speichern";
+  setCreateTrainingMessage("Bearbeitungsmodus aktiv.", false);
 }
 
 async function routeUser(profile) {
@@ -700,6 +756,7 @@ createTrainingForm?.addEventListener("submit", async (event) => {
   setCreateTrainingMessage("");
 
   try {
+    const trainingId = editTrainingIdInput?.value || "";
     const title = document.getElementById("new-training-title").value.trim();
     const url = document.getElementById("new-training-url").value.trim();
     const active = document.getElementById("new-training-active").value === "true";
@@ -713,20 +770,31 @@ createTrainingForm?.addEventListener("submit", async (event) => {
       return;
     }
 
-    await createTrainingFromForm({
+    const formData = {
       title,
       url,
       bereiche,
       active
-    });
+    };
 
-    setCreateTrainingMessage("Schulung wurde angelegt.", false);
-    createTrainingForm.reset();
+    if (trainingId) {
+      await updateTrainingFromForm(trainingId, formData);
+      setCreateTrainingMessage("Schulung wurde gespeichert.", false);
+    } else {
+      await createTrainingFromForm(formData);
+      setCreateTrainingMessage("Schulung wurde angelegt.", false);
+    }
+
+    resetTrainingForm();
     await loadAdminTrainings();
   } catch (error) {
     console.error(error);
-    setCreateTrainingMessage("Schulung konnte nicht angelegt werden.", true);
+    setCreateTrainingMessage("Schulung konnte nicht gespeichert werden.", true);
   }
+});
+
+cancelTrainingEditBtn?.addEventListener("click", () => {
+  resetTrainingForm();
 });
 
 onAuthStateChanged(auth, async (user) => {
