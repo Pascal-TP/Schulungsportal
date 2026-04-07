@@ -94,7 +94,15 @@ function formatDate(value) {
   return "-";
 }
 
-function createInfoCard({ title, lines = [], buttonText = "", onClick = null, status = "" }) {
+function createInfoCard({
+  title,
+  lines = [],
+  buttonText = "",
+  onClick = null,
+  secondaryButtonText = "",
+  onSecondaryClick = null,
+  status = ""
+}) {
   const card = document.createElement("div");
   card.className = "list-card";
 
@@ -123,8 +131,17 @@ function createInfoCard({ title, lines = [], buttonText = "", onClick = null, st
     card.appendChild(btn);
   }
 
+  if (secondaryButtonText && typeof onSecondaryClick === "function") {
+    const secondBtn = document.createElement("button");
+    secondBtn.className = "secondary-btn inline-btn";
+    secondBtn.textContent = secondaryButtonText;
+    secondBtn.addEventListener("click", onSecondaryClick);
+    card.appendChild(secondBtn);
+  }
+
   return card;
 }
+
 async function getUserProfile(uid) {
   const ref = doc(db, "users", uid);
   const snap = await getDoc(ref);
@@ -216,7 +233,6 @@ async function renderEmployeeView(profile) {
     trainingList.appendChild(createInfoCard({
       title: training.title,
       lines: [
-        `Bereiche: ${(training.bereiche || []).join(", ") || "alle"}`,
         `Link: ${training.url || "kein Link hinterlegt"}`
       ],
       status,
@@ -231,6 +247,16 @@ async function renderEmployeeView(profile) {
         } catch (error) {
           console.error(error);
           alert("Bearbeitungsstand konnte nicht gespeichert werden.");
+        }
+      },
+      secondaryButtonText: "Als abgeschlossen markieren",
+      onSecondaryClick: async () => {
+        try {
+          await markTrainingCompleted(profile.id, training);
+          await renderEmployeeView(profile);
+        } catch (error) {
+          console.error(error);
+          alert("Abschluss konnte nicht gespeichert werden.");
         }
       }
     }));
@@ -268,6 +294,21 @@ async function markTrainingOpened(userId, training) {
     status: "in_progress",
     openedAt: serverTimestamp(),
     completedAt: null
+  }, { merge: true });
+}
+
+async function markTrainingCompleted(userId, training) {
+  if (!userId || !training?.id) return;
+
+  const progressId = `${userId}_${training.id}`;
+  const progressRef = doc(db, "trainingProgress", progressId);
+
+  await setDoc(progressRef, {
+    userId,
+    trainingId: training.id,
+    trainingTitle: training.title || "Schulung",
+    status: "completed",
+    completedAt: serverTimestamp()
   }, { merge: true });
 }
 
