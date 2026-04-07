@@ -109,6 +109,7 @@
             <form id="create-user-form" class="form-card admin-form">
               <label for="new-user-name">Name</label>
               <input type="text" id="new-user-name" placeholder="Max Mustermann" required />
+              <input type="hidden" id="edit-user-id" />
 
               <label for="new-user-email">E-Mail</label>
               <input type="email" id="new-user-email" placeholder="max@firma.de" required />
@@ -168,7 +169,8 @@
                 <option value="false">inaktiv</option>
               </select>
 
-              <button type="submit" class="primary-btn">Benutzer anlegen</button>
+              <button type="submit" class="primary-btn" id="save-user-btn">Benutzer anlegen</button>
+              <button type="button" class="secondary-btn" id="cancel-user-edit-btn">Bearbeitung abbrechen</button>
               <p id="create-user-message" class="message-box"></p>
             </form>
 

@@ -44,6 +44,9 @@ const logoutBtn = document.getElementById("logout-btn");
 const userRoleBadge = document.getElementById("user-role-badge");
 const createUserForm = document.getElementById("create-user-form");
 const createUserMessage = document.getElementById("create-user-message");
+const editUserIdInput = document.getElementById("edit-user-id");
+const saveUserBtn = document.getElementById("save-user-btn");
+const cancelUserEditBtn = document.getElementById("cancel-user-edit-btn");
 const createTrainingForm = document.getElementById("create-training-form");
 const createTrainingMessage = document.getElementById("create-training-message");
 const editTrainingIdInput = document.getElementById("edit-training-id");
@@ -283,6 +286,48 @@ async function renderEmployeeView(profile) {
   });
 }
 
+async function updateUserProfile(userId, data) {
+  await updateDoc(doc(db, "users", userId), data);
+}
+
+async function deleteUserProfile(userId) {
+  await deleteDoc(doc(db, "users", userId));
+}
+
+function resetUserForm() {
+  if (!createUserForm) return;
+
+  createUserForm.reset();
+  if (editUserIdInput) editUserIdInput.value = "";
+  if (saveUserBtn) saveUserBtn.textContent = "Benutzer anlegen";
+  setCreateUserMessage("");
+}
+
+function fillUserFormForEdit(user) {
+  if (!user) return;
+
+  if (editUserIdInput) editUserIdInput.value = user.id;
+
+  document.getElementById("new-user-name").value = user.name || "";
+  document.getElementById("new-user-email").value = user.email || "";
+  document.getElementById("new-user-password").value = "";
+  document.getElementById("new-user-role").value = user.role || "employee";
+  document.getElementById("new-user-active").value = String(user.active !== false);
+  document.getElementById("new-user-supervisor").value = user.supervisorId || "";
+  document.getElementById("new-user-start").value = user.startDate || "";
+  document.getElementById("new-user-end").value = user.endDate || "";
+
+  document
+    .querySelectorAll('#new-user-bereiche input[type="checkbox"]')
+    .forEach((checkbox) => {
+      const value = parseInt(checkbox.value, 10);
+      checkbox.checked = Array.isArray(user.bereiche) && user.bereiche.includes(value);
+    });
+
+  if (saveUserBtn) saveUserBtn.textContent = "Benutzer speichern";
+  setCreateUserMessage("Bearbeitungsmodus aktiv.", false);
+}
+
 async function markTrainingOpened(userId, training) {
   if (!userId || !training?.id) return;
 
@@ -472,17 +517,33 @@ async function loadAdminUsers() {
   }
 
   users.forEach((user) => {
-    list.appendChild(createInfoCard({
-      title: user.name || user.email,
-      lines: [
-        `E-Mail: ${user.email || "-"}`,
-        `Rolle: ${user.role || "-"}`,
-        `Bereiche: ${(user.bereiche || []).join(", ") || "-"}`,
-        `Vorgesetzter-ID: ${user.supervisorId || "-"}`
-      ],
-      status: user.active === false ? "inaktiv" : "aktiv"
-    }));
-  });
+  list.appendChild(createInfoCard({
+    title: user.email,
+    lines: [
+      `Rolle: ${user.role}`,
+      `Bereiche: ${(user.bereiche || []).join(", ")}`
+    ],
+    status: user.active === false ? "inaktiv" : "aktiv",
+    buttonText: "Bearbeiten",
+    onClick: () => {
+      fillUserFormForEdit(user);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    },
+    secondaryButtonText: "Löschen",
+    onSecondaryClick: async () => {
+      const confirmed = confirm(`Soll der Benutzer "${user.email}" gelöscht werden?`);
+      if (!confirmed) return;
+
+      try {
+        await deleteUserProfile(user.id);
+        await loadAdminUsers();
+      } catch (error) {
+        console.error(error);
+        alert("Benutzer konnte nicht gelöscht werden.");
+      }
+    }
+  }));
+});
 }
 
 async function loadSupervisorOptions() {
@@ -712,6 +773,8 @@ createUserForm?.addEventListener("submit", async (event) => {
   setCreateUserMessage("");
 
   try {
+    const userId = editUserIdInput?.value || "";
+
     const name = document.getElementById("new-user-name").value.trim();
     const email = document.getElementById("new-user-email").value.trim();
     const password = document.getElementById("new-user-password").value.trim();
@@ -725,25 +788,40 @@ createUserForm?.addEventListener("submit", async (event) => {
     const endDate = document.getElementById("new-user-end").value;
     const active = document.getElementById("new-user-active").value === "true";
 
-    if (!name || !email || !password || !role) {
+    if (!name || !email || !role) {
       setCreateUserMessage("Bitte alle Pflichtfelder ausfüllen.", true);
       return;
     }
 
-    const result = await createPortalUserFromForm({
+    const data = {
       name,
       email,
-      password,
       role,
       bereiche,
       supervisorId,
       startDate,
       endDate,
       active
-    });
+    };
 
-    setCreateUserMessage(`Benutzer wurde angelegt. UID: ${result.uid}`, false);
-    createUserForm.reset();
+    if (userId) {
+      await updateUserProfile(userId, data);
+      setCreateUserMessage("Benutzer wurde aktualisiert.", false);
+    } else {
+      if (!password) {
+        setCreateUserMessage("Für neue Benutzer ist ein Start-Passwort erforderlich.", true);
+        return;
+      }
+
+      const result = await createPortalUserFromForm({
+        ...data,
+        password
+      });
+
+      setCreateUserMessage(`Benutzer wurde angelegt. UID: ${result.uid}`, false);
+    }
+
+    resetUserForm();
     await loadAdminUsers();
   } catch (error) {
     console.error(error);
@@ -795,6 +873,10 @@ createTrainingForm?.addEventListener("submit", async (event) => {
 
 cancelTrainingEditBtn?.addEventListener("click", () => {
   resetTrainingForm();
+});
+
+cancelUserEditBtn?.addEventListener("click", () => {
+  resetUserForm();
 });
 
 onAuthStateChanged(auth, async (user) => {
