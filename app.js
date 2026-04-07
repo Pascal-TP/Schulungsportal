@@ -370,21 +370,24 @@ async function renderSupervisorView(profile) {
     `Willkommen ${profile.name || ""}. Hier sehen Sie Ihre eigenen Schulungen und den Stand Ihrer Mitarbeiter.`;
 
   const ownTrainingList = document.getElementById("supervisor-own-training-list");
+  const ownProgressList = document.getElementById("supervisor-own-progress-list");
   const employeeList = document.getElementById("supervisor-employee-list");
   const progressList = document.getElementById("supervisor-progress-list");
 
   ownTrainingList.innerHTML = "";
+  ownProgressList.innerHTML = "";
   employeeList.innerHTML = "";
   progressList.innerHTML = "";
 
   const trainings = await getAllTrainings();
   const visibleTrainings = getVisibleTrainingsForProfile(trainings, profile);
+  const ownProgressEntries = await getProgressEntriesForUser(profile.id);
 
   visibleTrainings.forEach((training) => {
     ownTrainingList.appendChild(createInfoCard({
       title: training.title,
       lines: [
-        
+
         `Link: ${training.url || "kein Link hinterlegt"}`
       ],
       buttonText: "Schulung öffnen",
@@ -409,6 +412,24 @@ async function renderSupervisorView(profile) {
       lines: ["Ihnen sind aktuell keine Schulungen zugeordnet."]
     }));
   }
+
+  if (ownProgressEntries.length === 0) {
+    ownProgressList.appendChild(createInfoCard({
+      title: "Noch kein Bearbeitungsstand",
+      lines: ["Sobald Schulungen geöffnet oder abgeschlossen werden, erscheint der Status hier."]
+    }));
+  }
+
+  ownProgressEntries.forEach((entry) => {
+    ownProgressList.appendChild(createInfoCard({
+      title: entry.trainingTitle || "Schulung",
+      lines: [
+        `Geöffnet: ${formatDate(entry.openedAt)}`,
+        `Abgeschlossen: ${formatDate(entry.completedAt)}`
+      ],
+      status: entry.status || "offen"
+    }));
+  });
 
   const employees = await getEmployeesForSupervisor(profile.id);
 
@@ -465,10 +486,13 @@ async function renderAdminView(profile) {
   await loadSupervisorOptions();
 
   const ownTrainingList = document.getElementById("admin-own-training-list");
+  const ownProgressList = document.getElementById("admin-own-progress-list");
   ownTrainingList.innerHTML = "";
+  ownProgressList.innerHTML = "";
 
   const trainings = await getAllTrainings();
   const visibleTrainings = getVisibleTrainingsForProfile(trainings, profile);
+  const ownProgressEntries = await getProgressEntriesForUser(profile.id);
 
   if (visibleTrainings.length === 0) {
     ownTrainingList.appendChild(createInfoCard({
@@ -476,6 +500,24 @@ async function renderAdminView(profile) {
       lines: ["Auch Admins können eigene Schulungen haben."]
     }));
   }
+
+  if (ownProgressEntries.length === 0) {
+    ownProgressList.appendChild(createInfoCard({
+      title: "Noch kein Bearbeitungsstand",
+      lines: ["Sobald Schulungen geöffnet oder abgeschlossen werden, erscheint der Status hier."]
+    }));
+  }
+
+  ownProgressEntries.forEach((entry) => {
+    ownProgressList.appendChild(createInfoCard({
+      title: entry.trainingTitle || "Schulung",
+      lines: [
+        `Geöffnet: ${formatDate(entry.openedAt)}`,
+        `Abgeschlossen: ${formatDate(entry.completedAt)}`
+      ],
+      status: entry.status || "offen"
+    }));
+  });
 
   visibleTrainings.forEach((training) => {
     ownTrainingList.appendChild(createInfoCard({
@@ -517,33 +559,33 @@ async function loadAdminUsers() {
   }
 
   users.forEach((user) => {
-  list.appendChild(createInfoCard({
-    title: user.email,
-    lines: [
-      `Rolle: ${user.role}`,
-      `Bereiche: ${(user.bereiche || []).join(", ")}`
-    ],
-    status: user.active === false ? "inaktiv" : "aktiv",
-    buttonText: "Bearbeiten",
-    onClick: () => {
-      fillUserFormForEdit(user);
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    },
-    secondaryButtonText: "Löschen",
-    onSecondaryClick: async () => {
-      const confirmed = confirm(`Soll der Benutzer "${user.email}" gelöscht werden?`);
-      if (!confirmed) return;
+    list.appendChild(createInfoCard({
+      title: user.email,
+      lines: [
+        `Rolle: ${user.role}`,
+        `Bereiche: ${(user.bereiche || []).join(", ")}`
+      ],
+      status: user.active === false ? "inaktiv" : "aktiv",
+      buttonText: "Bearbeiten",
+      onClick: () => {
+        fillUserFormForEdit(user);
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      },
+      secondaryButtonText: "Löschen",
+      onSecondaryClick: async () => {
+        const confirmed = confirm(`Soll der Benutzer "${user.email}" gelöscht werden?`);
+        if (!confirmed) return;
 
-      try {
-        await deleteUserProfile(user.id);
-        await loadAdminUsers();
-      } catch (error) {
-        console.error(error);
-        alert("Benutzer konnte nicht gelöscht werden.");
+        try {
+          await deleteUserProfile(user.id);
+          await loadAdminUsers();
+        } catch (error) {
+          console.error(error);
+          alert("Benutzer konnte nicht gelöscht werden.");
+        }
       }
-    }
-  }));
-});
+    }));
+  });
 }
 
 async function loadSupervisorOptions() {
@@ -610,33 +652,33 @@ async function loadAdminTrainings() {
   }
 
   trainings.forEach((training) => {
-  list.appendChild(createInfoCard({
-    title: training.title,
-    lines: [
-      `URL: ${training.url || "-"}`,
-      `Bereiche: ${(training.bereiche || []).join(", ") || "alle"}`
-    ],
-    status: training.active === false ? "inaktiv" : "aktiv",
-    buttonText: "Bearbeiten",
-    onClick: () => {
-      fillTrainingFormForEdit(training);
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    },
-    secondaryButtonText: "Löschen",
-    onSecondaryClick: async () => {
-      const confirmed = confirm(`Soll die Schulung "${training.title}" wirklich gelöscht werden?`);
-      if (!confirmed) return;
+    list.appendChild(createInfoCard({
+      title: training.title,
+      lines: [
+        `URL: ${training.url || "-"}`,
+        `Bereiche: ${(training.bereiche || []).join(", ") || "alle"}`
+      ],
+      status: training.active === false ? "inaktiv" : "aktiv",
+      buttonText: "Bearbeiten",
+      onClick: () => {
+        fillTrainingFormForEdit(training);
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      },
+      secondaryButtonText: "Löschen",
+      onSecondaryClick: async () => {
+        const confirmed = confirm(`Soll die Schulung "${training.title}" wirklich gelöscht werden?`);
+        if (!confirmed) return;
 
-      try {
-        await deleteTrainingById(training.id);
-        await loadAdminTrainings();
-      } catch (error) {
-        console.error(error);
-        alert("Schulung konnte nicht gelöscht werden.");
+        try {
+          await deleteTrainingById(training.id);
+          await loadAdminTrainings();
+        } catch (error) {
+          console.error(error);
+          alert("Schulung konnte nicht gelöscht werden.");
+        }
       }
-    }
-  }));
-});
+    }));
+  });
 }
 
 async function createTrainingFromForm(formData) {
