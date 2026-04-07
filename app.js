@@ -17,6 +17,7 @@ import {
   where,
   updateDoc,
   setDoc,
+  addDoc,
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { firebaseConfig, blazeConfig } from "./firebase-config.js";
@@ -42,6 +43,9 @@ const logoutBtn = document.getElementById("logout-btn");
 const userRoleBadge = document.getElementById("user-role-badge");
 const createUserForm = document.getElementById("create-user-form");
 const createUserMessage = document.getElementById("create-user-message");
+const createTrainingForm = document.getElementById("create-training-form");
+const createTrainingMessage = document.getElementById("create-training-message");
+
 
 const pageIds = ["page-login", "page-employee", "page-supervisor", "page-admin"];
 let currentAuthUser = null;
@@ -63,6 +67,12 @@ function setCreateUserMessage(text = "", isError = false) {
   if (!createUserMessage) return;
   createUserMessage.textContent = text;
   createUserMessage.style.color = isError ? "#b42318" : "#027a48";
+}
+
+function setCreateTrainingMessage(text = "", isError = false) {
+  if (!createTrainingMessage) return;
+  createTrainingMessage.textContent = text;
+  createTrainingMessage.style.color = isError ? "#b42318" : "#027a48";
 }
 
 function showTopbarForLoggedInUser(profile) {
@@ -507,6 +517,10 @@ async function loadAdminTrainings() {
   });
 }
 
+async function createTrainingFromForm(formData) {
+  await addDoc(collection(db, "trainings"), formData);
+}
+
 async function routeUser(profile) {
   showTopbarForLoggedInUser(profile);
 
@@ -637,6 +651,40 @@ createUserForm?.addEventListener("submit", async (event) => {
   } catch (error) {
     console.error(error);
     setCreateUserMessage(`Fehler: ${error.message}`, true);
+  }
+});
+
+createTrainingForm?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  setCreateTrainingMessage("");
+
+  try {
+    const title = document.getElementById("new-training-title").value.trim();
+    const url = document.getElementById("new-training-url").value.trim();
+    const active = document.getElementById("new-training-active").value === "true";
+
+    const bereiche = Array.from(
+      document.querySelectorAll('#new-training-bereiche input[type="checkbox"]:checked')
+    ).map((checkbox) => parseInt(checkbox.value, 10));
+
+    if (!title || !url) {
+      setCreateTrainingMessage("Bitte Titel und Link eingeben.", true);
+      return;
+    }
+
+    await createTrainingFromForm({
+      title,
+      url,
+      bereiche,
+      active
+    });
+
+    setCreateTrainingMessage("Schulung wurde angelegt.", false);
+    createTrainingForm.reset();
+    await loadAdminTrainings();
+  } catch (error) {
+    console.error(error);
+    setCreateTrainingMessage("Schulung konnte nicht angelegt werden.", true);
   }
 });
 

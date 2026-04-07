@@ -160,9 +160,35 @@
               <h3>Schulungsverwaltung</h3>
               <div class="button-stack">
                 <button class="primary-btn" id="btn-load-trainings">Schulungen laden</button>
-                <button class="secondary-btn" disabled>Schulung anlegen (nächster Schritt)</button>
-                <button class="secondary-btn" disabled>Bereichen zuordnen (nächster Schritt)</button>
               </div>
+
+              <form id="create-training-form" class="form-card admin-form">
+                <label for="new-training-title">Titel</label>
+                <input type="text" id="new-training-title" placeholder="Datenschutz" required />
+
+                <label for="new-training-url">Link zur Schulung</label>
+                <input type="url" id="new-training-url" placeholder="https://pascal-tp.github.io/Schulung1/" required />
+
+                <label>Bereiche</label>
+                <div id="new-training-bereiche" class="checkbox-grid">
+                  <label><input type="checkbox" value="1" /> Bereich 1</label>
+                  <label><input type="checkbox" value="2" /> Bereich 2</label>
+                  <label><input type="checkbox" value="3" /> Bereich 3</label>
+                  <label><input type="checkbox" value="4" /> Bereich 4</label>
+                  <label><input type="checkbox" value="5" /> Bereich 5</label>
+                  <label><input type="checkbox" value="6" /> Bereich 6</label>
+                </div>
+
+                <label for="new-training-active">Status</label>
+                <select id="new-training-active">
+                  <option value="true">aktiv</option>
+                  <option value="false">inaktiv</option>
+                </select>
+
+                <button type="submit" class="primary-btn">Schulung anlegen</button>
+                <p id="create-training-message" class="message-box"></p>
+              </form>
+
               <div id="admin-training-list" class="card-list"></div>
             </div>
           </div>
