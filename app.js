@@ -1,5 +1,5 @@
 import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js";
+import { getFunctions } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js";
 import {
   getAuth,
   signInWithEmailAndPassword,
@@ -374,9 +374,31 @@ async function loadAdminUsers() {
 }
 
 async function createPortalUserFromForm(formData) {
-  const createPortalUser = httpsCallable(functions, "createPortalUser");
-  const result = await createPortalUser(formData);
-  return result.data;
+  if (!currentAuthUser) {
+    throw new Error("Nicht angemeldet.");
+  }
+
+  const idToken = await currentAuthUser.getIdToken();
+
+  const response = await fetch(
+    "https://us-central1-kalkpro-4cc29.cloudfunctions.net/createPortalUserHttp",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${idToken}`
+      },
+      body: JSON.stringify(formData)
+    }
+  );
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.error || "Benutzer konnte nicht angelegt werden.");
+  }
+
+  return data;
 }
 
  async function loadAdminTrainings() {
