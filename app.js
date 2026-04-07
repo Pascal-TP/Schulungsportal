@@ -1,5 +1,5 @@
 import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getFunctions } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js";
+import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js";
 import {
   getAuth,
   signInWithEmailAndPassword,
@@ -22,12 +22,6 @@ import {
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { firebaseConfig, blazeConfig } from "./firebase-config.js";
-import {
-  getStorage,
-  ref as storageRef,
-  uploadBytesResumable,
-  deleteObject
-} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
 
 const portalApp = getApps().some(app => app.name === "portal")
   ? getApp("portal")
@@ -40,7 +34,8 @@ const blazeApp = getApps().some(app => app.name === "blaze")
 const auth = getAuth(portalApp);
 const db = getFirestore(portalApp);
 const functions = getFunctions(blazeApp);
-const blazeStorage = getStorage(blazeApp);
+const uploadTrainingProofFn = httpsCallable(functions, "uploadTrainingProof");
+const deleteTrainingProofFn = httpsCallable(functions, "deleteTrainingProof");
 
 const loginForm = document.getElementById("login-form");
 const loginEmail = document.getElementById("login-email");
@@ -69,6 +64,24 @@ function showPage(pageId) {
     const page = document.getElementById(id);
     if (!page) return;
     page.classList.toggle("active-page", id === pageId);
+  });
+}
+
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      const result = reader.result || "";
+      const base64 = String(result).split(",")[1] || "";
+      resolve(base64);
+    };
+
+    reader.onerror = () => {
+      reject(new Error("Datei konnte nicht gelesen werden."));
+    };
+
+    reader.readAsDataURL(file);
   });
 }
 
@@ -171,60 +184,54 @@ async function uploadTrainingProof(userId, training, file, statusElement) {
     throw new Error("Die Datei ist zu groß. Maximal 10 MB sind erlaubt.");
   }
 
+  if (statusElement) {
+    statusElement.textContent = "Datei wird gelesen...";
+  }
+
+  const base64Data = await fileToBase64(file);
+
+  if (statusElement) {
+    statusElement.textContent = "Datei wird hochgeladen...";
+  }
+
   const progressDoc = await getTrainingProgressDoc(userId, training.id);
 
-  // Alte Datei löschen, falls schon ein Nachweis existiert
+  // Alte Datei löschen
   if (progressDoc.data?.proofPath) {
     try {
-      const oldFileRef = storageRef(blazeStorage, progressDoc.data.proofPath);
-      await deleteObject(oldFileRef);
+      await deleteTrainingProofFn({
+        proofPath: progressDoc.data.proofPath
+      });
     } catch (error) {
       console.warn("Alter Nachweis konnte nicht gelöscht werden:", error);
     }
   }
 
-  const safeFileName = sanitizeFileName(file.name);
-  const storagePath = `trainingProofs/${userId}/${training.id}/${Date.now()}_${safeFileName}`;
-  const fileRef = storageRef(blazeStorage, storagePath);
-
-  await new Promise((resolve, reject) => {
-    const uploadTask = uploadBytesResumable(fileRef, file);
-
-    uploadTask.on(
-      "state_changed",
-      (snapshot) => {
-        if (!statusElement) return;
-        const percent = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
-        statusElement.textContent = `Upload läuft: ${percent}%`;
-      },
-      (error) => reject(error),
-      () => resolve()
-    );
+  const result = await uploadTrainingProofFn({
+    portalUserId: userId,
+    trainingId: training.id,
+    trainingTitle: training.title || "Schulung",
+    fileName: file.name,
+    contentType: file.type,
+    base64Data
   });
+
+  const uploadData = result.data || {};
 
   await setDoc(progressDoc.progressRef, {
     userId,
     trainingId: training.id,
     trainingTitle: training.title || "Schulung",
-    proofName: file.name,
-    proofPath: storagePath,
-    proofSize: file.size,
-    proofContentType: file.type || "",
+    proofName: uploadData.proofName || file.name,
+    proofPath: uploadData.proofPath || "",
+    proofSize: uploadData.proofSize || file.size,
+    proofContentType: uploadData.proofContentType || file.type || "",
     proofUploadedAt: serverTimestamp()
   }, { merge: true });
 }
 
 async function deleteTrainingProof(userId, trainingId) {
   const progressDoc = await getTrainingProgressDoc(userId, trainingId);
-
-  if (!progressDoc.data?.proofPath) return;
-
-  try {
-    const fileRef = storageRef(blazeStorage, progressDoc.data.proofPath);
-    await deleteObject(fileRef);
-  } catch (error) {
-    console.warn("Nachweis konnte nicht aus Storage gelöscht werden:", error);
-  }
 
   await setDoc(progressDoc.progressRef, {
     proofName: null,
