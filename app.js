@@ -130,17 +130,31 @@ async function updateLastLogin(uid) {
   });
 }
 
+function parseLocalDate(dateString) {
+  if (!dateString) return null;
+
+  const parts = String(dateString).split("-");
+  if (parts.length !== 3) return null;
+
+  const year = parseInt(parts[0], 10);
+  const month = parseInt(parts[1], 10) - 1;
+  const day = parseInt(parts[2], 10);
+
+  return new Date(year, month, day);
+}
+
 function isUserActive(profile) {
   if (profile.active === false) return false;
 
   const today = new Date();
   const todayOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
 
-  const start = profile.startDate ? new Date(profile.startDate) : null;
-  const end = profile.endDate ? new Date(profile.endDate) : null;
+  const start = parseLocalDate(profile.startDate);
+  const end = parseLocalDate(profile.endDate);
 
   if (start && todayOnly < start) return false;
   if (end && todayOnly > end) return false;
+
   return true;
 }
 
