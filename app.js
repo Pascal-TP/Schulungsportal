@@ -402,7 +402,17 @@ async function renderSupervisorView(profile) {
           console.error(error);
           alert("Bearbeitungsstand konnte nicht gespeichert werden.");
         }
+      },
+    secondaryButtonText: "Als abgeschlossen markieren",
+    onSecondaryClick: async () => {
+      try {
+        await markTrainingCompleted(profile.id, training);
+        await renderSupervisorView(profile);
+      } catch (error) {
+        console.error(error);
+        alert("Abschluss konnte nicht gespeichert werden.");
       }
+    }
     }));
   });
 
@@ -538,7 +548,17 @@ async function renderAdminView(profile) {
           console.error(error);
           alert("Bearbeitungsstand konnte nicht gespeichert werden.");
         }
+      },
+    secondaryButtonText: "Als abgeschlossen markieren",
+    onSecondaryClick: async () => {
+      try {
+        await markTrainingCompleted(profile.id, training);
+        await renderAdminView(profile);
+      } catch (error) {
+        console.error(error);
+        alert("Abschluss konnte nicht gespeichert werden.");
       }
+    }
     }));
   });
 }
