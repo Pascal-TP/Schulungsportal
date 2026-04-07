@@ -33,7 +33,7 @@ const blazeApp = getApps().some(app => app.name === "blaze")
 
 const auth = getAuth(portalApp);
 const db = getFirestore(portalApp);
-const functions = getFunctions(blazeApp);
+const functions = getFunctions(blazeApp, "europe-west1");
 const uploadTrainingProofFn = httpsCallable(functions, "uploadTrainingProof");
 const deleteTrainingProofFn = httpsCallable(functions, "deleteTrainingProof");
 
