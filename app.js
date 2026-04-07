@@ -22,6 +22,12 @@ import {
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { firebaseConfig, blazeConfig } from "./firebase-config.js";
+import {
+  getStorage,
+  ref as storageRef,
+  uploadBytesResumable,
+  deleteObject
+} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
 
 const portalApp = getApps().some(app => app.name === "portal")
   ? getApp("portal")
@@ -34,6 +40,7 @@ const blazeApp = getApps().some(app => app.name === "blaze")
 const auth = getAuth(portalApp);
 const db = getFirestore(portalApp);
 const functions = getFunctions(blazeApp);
+const blazeStorage = getStorage(blazeApp);
 
 const loginForm = document.getElementById("login-form");
 const loginEmail = document.getElementById("login-email");
@@ -98,6 +105,273 @@ function formatDate(value) {
   if (typeof value === "string") return value;
   if (value?.toDate) return value.toDate().toLocaleDateString("de-DE");
   return "-";
+}
+
+const MAX_PROOF_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+
+function sanitizeFileName(name = "") {
+  return String(name)
+    .replace(/\s+/g, "_")
+    .replace(/[^a-zA-Z0-9._-]/g, "");
+}
+
+function isAllowedProofFile(file) {
+  if (!file) return false;
+
+  const allowedMimeTypes = [
+    "application/pdf",
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "image/gif"
+  ];
+
+  return allowedMimeTypes.includes(file.type);
+}
+
+function formatFileSize(bytes) {
+  if (!bytes || Number.isNaN(bytes)) return "-";
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+async function getTrainingProgressDoc(userId, trainingId) {
+  const progressId = `${userId}_${trainingId}`;
+  const progressRef = doc(db, "trainingProgress", progressId);
+  const snap = await getDoc(progressRef);
+
+  return {
+    progressId,
+    progressRef,
+    exists: snap.exists(),
+    data: snap.exists() ? snap.data() : null
+  };
+}
+
+async function trainingHasProof(userId, trainingId) {
+  const progressDoc = await getTrainingProgressDoc(userId, trainingId);
+  return !!(progressDoc.data?.proofPath && progressDoc.data?.proofName);
+}
+
+async function uploadTrainingProof(userId, training, file, statusElement) {
+  if (!userId || !training?.id) {
+    throw new Error("Benutzer oder Schulung fehlen.");
+  }
+
+  if (!file) {
+    throw new Error("Bitte eine Datei auswählen.");
+  }
+
+  if (!isAllowedProofFile(file)) {
+    throw new Error("Erlaubt sind nur PDF, JPG, PNG, WEBP oder GIF.");
+  }
+
+  if (file.size > MAX_PROOF_FILE_SIZE) {
+    throw new Error("Die Datei ist zu groß. Maximal 10 MB sind erlaubt.");
+  }
+
+  const progressDoc = await getTrainingProgressDoc(userId, training.id);
+
+  // Alte Datei löschen, falls schon ein Nachweis existiert
+  if (progressDoc.data?.proofPath) {
+    try {
+      const oldFileRef = storageRef(blazeStorage, progressDoc.data.proofPath);
+      await deleteObject(oldFileRef);
+    } catch (error) {
+      console.warn("Alter Nachweis konnte nicht gelöscht werden:", error);
+    }
+  }
+
+  const safeFileName = sanitizeFileName(file.name);
+  const storagePath = `trainingProofs/${userId}/${training.id}/${Date.now()}_${safeFileName}`;
+  const fileRef = storageRef(blazeStorage, storagePath);
+
+  await new Promise((resolve, reject) => {
+    const uploadTask = uploadBytesResumable(fileRef, file);
+
+    uploadTask.on(
+      "state_changed",
+      (snapshot) => {
+        if (!statusElement) return;
+        const percent = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
+        statusElement.textContent = `Upload läuft: ${percent}%`;
+      },
+      (error) => reject(error),
+      () => resolve()
+    );
+  });
+
+  await setDoc(progressDoc.progressRef, {
+    userId,
+    trainingId: training.id,
+    trainingTitle: training.title || "Schulung",
+    proofName: file.name,
+    proofPath: storagePath,
+    proofSize: file.size,
+    proofContentType: file.type || "",
+    proofUploadedAt: serverTimestamp()
+  }, { merge: true });
+}
+
+async function deleteTrainingProof(userId, trainingId) {
+  const progressDoc = await getTrainingProgressDoc(userId, trainingId);
+
+  if (!progressDoc.data?.proofPath) return;
+
+  try {
+    const fileRef = storageRef(blazeStorage, progressDoc.data.proofPath);
+    await deleteObject(fileRef);
+  } catch (error) {
+    console.warn("Nachweis konnte nicht aus Storage gelöscht werden:", error);
+  }
+
+  await setDoc(progressDoc.progressRef, {
+    proofName: null,
+    proofPath: null,
+    proofSize: null,
+    proofContentType: null,
+    proofUploadedAt: null
+  }, { merge: true });
+}
+
+function createTrainingActionCard({
+  userId,
+  training,
+  progress,
+  rerender,
+  showBereiche = false
+}) {
+  const card = document.createElement("div");
+  card.className = "list-card";
+
+  const heading = document.createElement("h4");
+  heading.textContent = training.title || "Schulung";
+  card.appendChild(heading);
+
+  if (showBereiche) {
+    const bereicheLine = document.createElement("p");
+    bereicheLine.textContent = `Bereiche: ${(training.bereiche || []).join(", ") || "alle"}`;
+    card.appendChild(bereicheLine);
+  }
+
+  const linkLine = document.createElement("p");
+  linkLine.textContent = `Link: ${training.url || "kein Link hinterlegt"}`;
+  card.appendChild(linkLine);
+
+  const proofLine = document.createElement("p");
+  proofLine.textContent = progress?.proofName
+    ? `Nachweis: ${progress.proofName} (${formatFileSize(progress.proofSize)})`
+    : "Nachweis: noch nicht hochgeladen";
+  card.appendChild(proofLine);
+
+  const statusBadge = document.createElement("span");
+  statusBadge.className = "status";
+  statusBadge.textContent = progress?.status || "nicht begonnen";
+  card.appendChild(statusBadge);
+
+  const uploadStatus = document.createElement("p");
+  uploadStatus.style.marginTop = "10px";
+  uploadStatus.style.fontWeight = "700";
+  uploadStatus.style.color = "#b42318";
+  uploadStatus.textContent = "";
+  card.appendChild(uploadStatus);
+
+  const openBtn = document.createElement("button");
+  openBtn.className = "primary-btn inline-btn";
+  openBtn.textContent = "Schulung öffnen";
+  openBtn.addEventListener("click", async () => {
+    try {
+      await markTrainingOpened(userId, training);
+      if (training.url) {
+        window.open(training.url, "_blank", "noopener,noreferrer");
+      }
+      await rerender();
+    } catch (error) {
+      console.error(error);
+      alert("Bearbeitungsstand konnte nicht gespeichert werden.");
+    }
+  });
+  card.appendChild(openBtn);
+
+  const fileInput = document.createElement("input");
+  fileInput.type = "file";
+  fileInput.accept = "application/pdf,image/*";
+  fileInput.style.display = "none";
+
+  const uploadBtn = document.createElement("button");
+  uploadBtn.className = "secondary-btn inline-btn";
+  uploadBtn.textContent = progress?.proofName ? "Nachweis ersetzen" : "Nachweis auswählen";
+  uploadBtn.addEventListener("click", () => {
+    fileInput.click();
+  });
+  card.appendChild(uploadBtn);
+
+  fileInput.addEventListener("change", async (event) => {
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      uploadStatus.textContent = "Wählen Sie eine Datei mit dem Nachweis aus.";
+      return;
+    }
+
+    try {
+      uploadStatus.style.color = "#1f2328";
+      uploadStatus.textContent = "Upload wird vorbereitet...";
+      await uploadTrainingProof(userId, training, file, uploadStatus);
+      uploadStatus.style.color = "#027a48";
+      uploadStatus.textContent = "Nachweis erfolgreich hochgeladen.";
+      await rerender();
+    } catch (error) {
+      console.error(error);
+      uploadStatus.style.color = "#b42318";
+      uploadStatus.textContent = error.message || "Upload fehlgeschlagen.";
+    } finally {
+      event.target.value = "";
+    }
+  });
+
+  card.appendChild(fileInput);
+
+  if (progress?.proofPath) {
+    const removeProofBtn = document.createElement("button");
+    removeProofBtn.className = "secondary-btn inline-btn";
+    removeProofBtn.textContent = "Nachweis entfernen";
+    removeProofBtn.addEventListener("click", async () => {
+      try {
+        await deleteTrainingProof(userId, training.id);
+        await rerender();
+      } catch (error) {
+        console.error(error);
+        alert("Nachweis konnte nicht entfernt werden.");
+      }
+    });
+    card.appendChild(removeProofBtn);
+  }
+
+  const completeBtn = document.createElement("button");
+  completeBtn.className = "secondary-btn inline-btn";
+  completeBtn.textContent = "Als abgeschlossen markieren";
+  completeBtn.addEventListener("click", async () => {
+    try {
+      const hasProof = await trainingHasProof(userId, training.id);
+
+      if (!hasProof) {
+        uploadStatus.style.color = "#b42318";
+        uploadStatus.textContent = "Wählen Sie eine Datei mit dem Nachweis aus.";
+        return;
+      }
+
+      await markTrainingCompleted(userId, training);
+      await rerender();
+    } catch (error) {
+      console.error(error);
+      alert("Abschluss konnte nicht gespeichert werden.");
+    }
+  });
+  card.appendChild(completeBtn);
+
+  return card;
 }
 
 function createInfoCard({
@@ -233,39 +507,17 @@ async function renderEmployeeView(profile) {
   }
 
   visibleTrainings.forEach((training) => {
-    const progress = progressEntries.find((entry) => entry.trainingId === training.id);
-    const status = progress?.status || "nicht begonnen";
+  const progress = progressEntries.find((entry) => entry.trainingId === training.id);
 
-    trainingList.appendChild(createInfoCard({
-      title: training.title,
-      lines: [
-        `Link: ${training.url || "kein Link hinterlegt"}`
-      ],
-      buttonText: "Schulung öffnen",
-      onClick: async () => {
-        try {
-          await markTrainingOpened(profile.id, training);
-          if (training.url) {
-            window.open(training.url, "_blank", "noopener,noreferrer");
-          }
-          await renderEmployeeView(profile);
-        } catch (error) {
-          console.error(error);
-          alert("Bearbeitungsstand konnte nicht gespeichert werden.");
-        }
-      },
-      secondaryButtonText: "Als abgeschlossen markieren",
-      onSecondaryClick: async () => {
-        try {
-          await markTrainingCompleted(profile.id, training);
-          await renderEmployeeView(profile);
-        } catch (error) {
-          console.error(error);
-          alert("Abschluss konnte nicht gespeichert werden.");
-        }
-      }
-    }));
-  });
+  trainingList.appendChild(createTrainingActionCard({
+    userId: profile.id,
+    training,
+    progress,
+    rerender: async () => {
+      await renderEmployeeView(profile);
+    }
+  }));
+});
 
   if (progressEntries.length === 0) {
     progressList.appendChild(createInfoCard({
@@ -275,15 +527,16 @@ async function renderEmployeeView(profile) {
   }
 
   progressEntries.forEach((entry) => {
-    progressList.appendChild(createInfoCard({
-      title: entry.trainingTitle || "Schulung",
-      lines: [
-        `Geöffnet: ${formatDate(entry.openedAt)}`,
-        `Abgeschlossen: ${formatDate(entry.completedAt)}`
-      ],
-      status: entry.status || "offen"
-    }));
-  });
+  progressList.appendChild(createInfoCard({
+    title: entry.trainingTitle || "Schulung",
+    lines: [
+      `Geöffnet: ${formatDate(entry.openedAt)}`,
+      `Abgeschlossen: ${formatDate(entry.completedAt)}`,
+      `Nachweis: ${entry.proofName || "-"}`
+    ],
+    status: entry.status || "offen"
+  }));
+});
 }
 
 async function updateUserProfile(userId, data) {
@@ -347,10 +600,13 @@ async function markTrainingOpened(userId, training) {
 async function markTrainingCompleted(userId, training) {
   if (!userId || !training?.id) return;
 
-  const progressId = `${userId}_${training.id}`;
-  const progressRef = doc(db, "trainingProgress", progressId);
+  const progressDoc = await getTrainingProgressDoc(userId, training.id);
 
-  await setDoc(progressRef, {
+  if (!progressDoc.data?.proofPath || !progressDoc.data?.proofName) {
+    throw new Error("Wählen Sie eine Datei mit dem Nachweis aus.");
+  }
+
+  await setDoc(progressDoc.progressRef, {
     userId,
     trainingId: training.id,
     trainingTitle: training.title || "Schulung",
@@ -384,37 +640,17 @@ async function renderSupervisorView(profile) {
   const ownProgressEntries = await getProgressEntriesForUser(profile.id);
 
   visibleTrainings.forEach((training) => {
-    ownTrainingList.appendChild(createInfoCard({
-      title: training.title,
-      lines: [
+  const progress = ownProgressEntries.find((entry) => entry.trainingId === training.id);
 
-        `Link: ${training.url || "kein Link hinterlegt"}`
-      ],
-      buttonText: "Schulung öffnen",
-      onClick: async () => {
-        try {
-          await markTrainingOpened(profile.id, training);
-          if (training.url) {
-            window.open(training.url, "_blank", "noopener,noreferrer");
-          }
-          await renderSupervisorView(profile);
-        } catch (error) {
-          console.error(error);
-          alert("Bearbeitungsstand konnte nicht gespeichert werden.");
-        }
-      },
-    secondaryButtonText: "Als abgeschlossen markieren",
-    onSecondaryClick: async () => {
-      try {
-        await markTrainingCompleted(profile.id, training);
-        await renderSupervisorView(profile);
-      } catch (error) {
-        console.error(error);
-        alert("Abschluss konnte nicht gespeichert werden.");
-      }
+  ownTrainingList.appendChild(createTrainingActionCard({
+    userId: profile.id,
+    training,
+    progress,
+    rerender: async () => {
+      await renderSupervisorView(profile);
     }
-    }));
-  });
+  }));
+});
 
   if (visibleTrainings.length === 0) {
     ownTrainingList.appendChild(createInfoCard({
@@ -431,15 +667,16 @@ async function renderSupervisorView(profile) {
   }
 
   ownProgressEntries.forEach((entry) => {
-    ownProgressList.appendChild(createInfoCard({
-      title: entry.trainingTitle || "Schulung",
-      lines: [
-        `Geöffnet: ${formatDate(entry.openedAt)}`,
-        `Abgeschlossen: ${formatDate(entry.completedAt)}`
-      ],
-      status: entry.status || "offen"
-    }));
-  });
+  ownProgressList.appendChild(createInfoCard({
+    title: entry.trainingTitle || "Schulung",
+    lines: [
+      `Geöffnet: ${formatDate(entry.openedAt)}`,
+      `Abgeschlossen: ${formatDate(entry.completedAt)}`,
+      `Nachweis: ${entry.proofName || "-"}`
+    ],
+    status: entry.status || "offen"
+  }));
+});
 
   const employees = await getEmployeesForSupervisor(profile.id);
 
@@ -478,15 +715,16 @@ async function renderSupervisorView(profile) {
     }
 
     progressEntries.forEach((entry) => {
-      progressList.appendChild(createInfoCard({
-        title: `${employee.name || employee.email} – ${entry.trainingTitle || "Schulung"}`,
-        lines: [
-          `Geöffnet: ${formatDate(entry.openedAt)}`,
-          `Abgeschlossen: ${formatDate(entry.completedAt)}`
-        ],
-        status: entry.status || "offen"
-      }));
-    });
+  progressList.appendChild(createInfoCard({
+    title: `${employee.name || employee.email} – ${entry.trainingTitle || "Schulung"}`,
+    lines: [
+      `Geöffnet: ${formatDate(entry.openedAt)}`,
+      `Abgeschlossen: ${formatDate(entry.completedAt)}`,
+      `Nachweis: ${entry.proofName || "-"}`
+    ],
+    status: entry.status || "offen"
+  }));
+});
   }
 }
 
@@ -518,49 +756,31 @@ async function renderAdminView(profile) {
     }));
   }
 
-  ownProgressEntries.forEach((entry) => {
-    ownProgressList.appendChild(createInfoCard({
-      title: entry.trainingTitle || "Schulung",
-      lines: [
-        `Geöffnet: ${formatDate(entry.openedAt)}`,
-        `Abgeschlossen: ${formatDate(entry.completedAt)}`
-      ],
-      status: entry.status || "offen"
-    }));
-  });
+ ownProgressEntries.forEach((entry) => {
+  ownProgressList.appendChild(createInfoCard({
+    title: entry.trainingTitle || "Schulung",
+    lines: [
+      `Geöffnet: ${formatDate(entry.openedAt)}`,
+      `Abgeschlossen: ${formatDate(entry.completedAt)}`,
+      `Nachweis: ${entry.proofName || "-"}`
+    ],
+    status: entry.status || "offen"
+  }));
+});
 
   visibleTrainings.forEach((training) => {
-    ownTrainingList.appendChild(createInfoCard({
-      title: training.title,
-      lines: [
-        `Bereiche: ${(training.bereiche || []).join(", ") || "alle"}`,
-        `Link: ${training.url || "kein Link hinterlegt"}`
-      ],
-      buttonText: "Schulung öffnen",
-      onClick: async () => {
-        try {
-          await markTrainingOpened(profile.id, training);
-          if (training.url) {
-            window.open(training.url, "_blank", "noopener,noreferrer");
-          }
-          await renderAdminView(profile);
-        } catch (error) {
-          console.error(error);
-          alert("Bearbeitungsstand konnte nicht gespeichert werden.");
-        }
-      },
-    secondaryButtonText: "Als abgeschlossen markieren",
-    onSecondaryClick: async () => {
-      try {
-        await markTrainingCompleted(profile.id, training);
-        await renderAdminView(profile);
-      } catch (error) {
-        console.error(error);
-        alert("Abschluss konnte nicht gespeichert werden.");
-      }
-    }
-    }));
-  });
+  const progress = ownProgressEntries.find((entry) => entry.trainingId === training.id);
+
+  ownTrainingList.appendChild(createTrainingActionCard({
+    userId: profile.id,
+    training,
+    progress,
+    rerender: async () => {
+      await renderAdminView(profile);
+    },
+    showBereiche: true
+  }));
+});
 }
 
 async function loadAdminUsers() {
