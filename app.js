@@ -329,6 +329,7 @@ async function renderSupervisorView(profile) {
 async function renderAdminView(profile) {
   document.getElementById("admin-welcome").textContent =
     `Willkommen ${profile.name || ""}. Hier befindet sich der Verwaltungsbereich.`;
+  await loadSupervisorOptions();
 
   const ownTrainingList = document.getElementById("admin-own-training-list");
   ownTrainingList.innerHTML = "";
@@ -387,6 +388,27 @@ async function loadAdminUsers() {
   });
 }
 
+async function loadSupervisorOptions() {
+  const select = document.getElementById("new-user-supervisor");
+  if (!select) return;
+
+  select.innerHTML = `<option value="">Kein Vorgesetzter</option>`;
+
+  const snap = await getDocs(collection(db, "users"));
+  const users = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+
+  const supervisors = users.filter(
+    (user) => user.role === "supervisor" || user.role === "admin"
+  );
+
+  supervisors.forEach((user) => {
+    const option = document.createElement("option");
+    option.value = user.id;
+    option.textContent = `${user.name || user.email} (${user.role})`;
+    select.appendChild(option);
+  });
+}
+
 async function createPortalUserFromForm(formData) {
   if (!currentAuthUser) {
     throw new Error("Nicht angemeldet.");
@@ -415,7 +437,7 @@ async function createPortalUserFromForm(formData) {
   return data;
 }
 
- async function loadAdminTrainings() {
+async function loadAdminTrainings() {
   const list = document.getElementById("admin-training-list");
   list.innerHTML = "";
 
@@ -539,8 +561,11 @@ createUserForm?.addEventListener("submit", async (event) => {
     const email = document.getElementById("new-user-email").value.trim();
     const password = document.getElementById("new-user-password").value.trim();
     const role = document.getElementById("new-user-role").value;
-    const bereicheRaw = document.getElementById("new-user-bereiche").value.trim();
-    const supervisorId = document.getElementById("new-user-supervisor").value.trim();
+    const bereiche = Array.from(
+      document.querySelectorAll('#new-user-bereiche input[type="checkbox"]:checked')
+    ).map((checkbox) => parseInt(checkbox.value, 10));
+
+    const supervisorId = document.getElementById("new-user-supervisor").value;
     const startDate = document.getElementById("new-user-start").value;
     const endDate = document.getElementById("new-user-end").value;
     const active = document.getElementById("new-user-active").value === "true";
@@ -549,13 +574,6 @@ createUserForm?.addEventListener("submit", async (event) => {
       setCreateUserMessage("Bitte alle Pflichtfelder ausfüllen.", true);
       return;
     }
-
-    const bereiche = bereicheRaw
-      ? bereicheRaw
-          .split(",")
-          .map(v => parseInt(v.trim(), 10))
-          .filter(v => !Number.isNaN(v))
-      : [];
 
     const result = await createPortalUserFromForm({
       name,
