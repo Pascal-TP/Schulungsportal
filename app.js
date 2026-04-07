@@ -233,12 +233,24 @@ async function uploadTrainingProof(userId, training, file, statusElement) {
 async function deleteTrainingProof(userId, trainingId) {
   const progressDoc = await getTrainingProgressDoc(userId, trainingId);
 
+  if (progressDoc.data?.proofPath) {
+    try {
+      await deleteTrainingProofFn({
+        proofPath: progressDoc.data.proofPath
+      });
+    } catch (error) {
+      console.warn("Nachweis konnte nicht aus Storage gelöscht werden:", error);
+    }
+  }
+
   await setDoc(progressDoc.progressRef, {
     proofName: null,
     proofPath: null,
     proofSize: null,
     proofContentType: null,
-    proofUploadedAt: null
+    proofUploadedAt: null,
+    status: "in_progress",
+    completedAt: null
   }, { merge: true });
 }
 
