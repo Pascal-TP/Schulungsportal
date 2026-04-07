@@ -1,5 +1,5 @@
 import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getFunctions } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js";
+import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js";
 import {
   getAuth,
   signInWithEmailAndPassword,
@@ -39,6 +39,8 @@ const loginMessage = document.getElementById("login-message");
 const resetPasswordBtn = document.getElementById("reset-password-btn");
 const logoutBtn = document.getElementById("logout-btn");
 const userRoleBadge = document.getElementById("user-role-badge");
+const createUserForm = document.getElementById("create-user-form");
+const createUserMessage = document.getElementById("create-user-message");
 
 const pageIds = ["page-login", "page-employee", "page-supervisor", "page-admin"];
 let currentAuthUser = null;
@@ -54,6 +56,12 @@ function showPage(pageId) {
 
 function setMessage(text = "") {
   loginMessage.textContent = text;
+}
+
+function setCreateUserMessage(text = "", isError = false) {
+  if (!createUserMessage) return;
+  createUserMessage.textContent = text;
+  createUserMessage.style.color = isError ? "#b42318" : "#027a48";
 }
 
 function showTopbarForLoggedInUser(profile) {
@@ -365,6 +373,12 @@ async function loadAdminUsers() {
   });
 }
 
+async function createPortalUserFromForm(formData) {
+  const createPortalUser = httpsCallable(functions, "createPortalUser");
+  const result = await createPortalUser(formData);
+  return result.data;
+}
+
  async function loadAdminTrainings() {
   const list = document.getElementById("admin-training-list");
   list.innerHTML = "";
@@ -477,6 +491,54 @@ document.getElementById("btn-load-trainings").addEventListener("click", async ()
   } catch (error) {
     console.error(error);
     alert("Schulungen konnten nicht geladen werden.");
+  }
+});
+
+createUserForm?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  setCreateUserMessage("");
+
+  try {
+    const name = document.getElementById("new-user-name").value.trim();
+    const email = document.getElementById("new-user-email").value.trim();
+    const password = document.getElementById("new-user-password").value.trim();
+    const role = document.getElementById("new-user-role").value;
+    const bereicheRaw = document.getElementById("new-user-bereiche").value.trim();
+    const supervisorId = document.getElementById("new-user-supervisor").value.trim();
+    const startDate = document.getElementById("new-user-start").value;
+    const endDate = document.getElementById("new-user-end").value;
+    const active = document.getElementById("new-user-active").value === "true";
+
+    if (!name || !email || !password || !role) {
+      setCreateUserMessage("Bitte alle Pflichtfelder ausfüllen.", true);
+      return;
+    }
+
+    const bereiche = bereicheRaw
+      ? bereicheRaw
+          .split(",")
+          .map(v => parseInt(v.trim(), 10))
+          .filter(v => !Number.isNaN(v))
+      : [];
+
+    const result = await createPortalUserFromForm({
+      name,
+      email,
+      password,
+      role,
+      bereiche,
+      supervisorId,
+      startDate,
+      endDate,
+      active
+    });
+
+    setCreateUserMessage(`Benutzer wurde angelegt. UID: ${result.uid}`, false);
+    createUserForm.reset();
+    await loadAdminUsers();
+  } catch (error) {
+    console.error(error);
+    setCreateUserMessage(`Fehler: ${error.message}`, true);
   }
 });
 
