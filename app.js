@@ -5,7 +5,8 @@ import {
   signInWithEmailAndPassword,
   sendPasswordResetEmail,
   onAuthStateChanged,
-  signOut
+  signOut,
+  updatePassword
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import {
   getFirestore,
@@ -22,24 +23,6 @@ import {
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { firebaseConfig, blazeConfig } from "./firebase-config.js";
-import { updatePassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-
-changePasswordBtn.addEventListener("click", async () => {
-  const newPassword = prompt("Bitte neues Passwort eingeben:");
-
-  if (!newPassword || newPassword.length < 6) {
-    alert("Passwort muss mindestens 6 Zeichen haben.");
-    return;
-  }
-
-  try {
-    await updatePassword(auth.currentUser, newPassword);
-    alert("Passwort erfolgreich geändert.");
-  } catch (error) {
-    console.error(error);
-    alert("Passwort konnte nicht geändert werden.");
-  }
-});
 
 const portalApp = getApps().some(app => app.name === "portal")
   ? getApp("portal")
@@ -79,6 +62,23 @@ const cancelTrainingEditBtn = document.getElementById("cancel-training-edit-btn"
 const pageIds = ["page-login", "page-employee", "page-supervisor", "page-admin"];
 let currentAuthUser = null;
 let currentProfile = null;
+
+changePasswordBtn?.addEventListener("click", async () => {
+  const newPassword = prompt("Bitte neues Passwort eingeben:");
+
+  if (!newPassword || newPassword.length < 6) {
+    alert("Passwort muss mindestens 6 Zeichen haben.");
+    return;
+  }
+
+  try {
+    await updatePassword(auth.currentUser, newPassword);
+    alert("Passwort erfolgreich geändert.");
+  } catch (error) {
+    console.error(error);
+    alert("Passwort konnte nicht geändert werden.");
+  }
+});
 
 function showPage(pageId) {
   pageIds.forEach((id) => {
