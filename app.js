@@ -22,6 +22,24 @@ import {
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { firebaseConfig, blazeConfig } from "./firebase-config.js";
+import { updatePassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+
+changePasswordBtn.addEventListener("click", async () => {
+  const newPassword = prompt("Bitte neues Passwort eingeben:");
+
+  if (!newPassword || newPassword.length < 6) {
+    alert("Passwort muss mindestens 6 Zeichen haben.");
+    return;
+  }
+
+  try {
+    await updatePassword(auth.currentUser, newPassword);
+    alert("Passwort erfolgreich geändert.");
+  } catch (error) {
+    console.error(error);
+    alert("Passwort konnte nicht geändert werden.");
+  }
+});
 
 const portalApp = getApps().some(app => app.name === "portal")
   ? getApp("portal")
@@ -44,6 +62,7 @@ const loginEmail = document.getElementById("login-email");
 const loginPassword = document.getElementById("login-password");
 const loginMessage = document.getElementById("login-message");
 const resetPasswordBtn = document.getElementById("reset-password-btn");
+const changePasswordBtn = document.getElementById("change-password-btn");
 const logoutBtn = document.getElementById("logout-btn");
 const userRoleBadge = document.getElementById("user-role-badge");
 const createUserForm = document.getElementById("create-user-form");
@@ -165,6 +184,7 @@ function setCreateTrainingMessage(text = "", isError = false) {
 
 function showTopbarForLoggedInUser(profile) {
   logoutBtn.classList.remove("hidden");
+  changePasswordBtn.classList.remove("hidden");
   userRoleBadge.classList.remove("hidden");
   userRoleBadge.textContent = `Rolle: ${profile.role}`;
 }
@@ -172,6 +192,7 @@ function showTopbarForLoggedInUser(profile) {
 function hideTopbarUserControls() {
   logoutBtn.classList.add("hidden");
   userRoleBadge.classList.add("hidden");
+  changePasswordBtn.classList.add("hidden");
   userRoleBadge.textContent = "";
 }
 
