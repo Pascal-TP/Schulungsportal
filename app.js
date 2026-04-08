@@ -58,6 +58,11 @@ const createTrainingMessage = document.getElementById("create-training-message")
 const editTrainingIdInput = document.getElementById("edit-training-id");
 const saveTrainingBtn = document.getElementById("save-training-btn");
 const cancelTrainingEditBtn = document.getElementById("cancel-training-edit-btn");
+const userLoginTypeSelect = document.getElementById("new-user-login-type");
+const newUserEmailInput = document.getElementById("new-user-email");
+const newUserUsernameInput = document.getElementById("new-user-username");
+const emailFieldGroup = document.getElementById("email-field-group");
+const usernameFieldGroup = document.getElementById("username-field-group");
 
 const pageIds = ["page-login", "page-employee", "page-supervisor", "page-admin"];
 let currentAuthUser = null;
@@ -87,6 +92,46 @@ function showPage(pageId) {
     page.classList.toggle("active-page", id === pageId);
   });
 }
+
+function toSyntheticEmail(username = "") {
+  return `${String(username).trim().toLowerCase()}@portal.local`;
+}
+
+function isSyntheticPortalEmail(value = "") {
+  return String(value).trim().toLowerCase().endsWith("@portal.local");
+}
+
+function normalizeLoginIdentifier(value = "") {
+  const login = String(value).trim();
+
+  if (!login) return "";
+
+  if (login.includes("@")) {
+    return login.toLowerCase();
+  }
+
+  return toSyntheticEmail(login);
+}
+
+function updateUserLoginTypeUI() {
+  const mode = userLoginTypeSelect?.value || "email";
+  const isUsernameMode = mode === "username";
+
+  emailFieldGroup?.classList.toggle("hidden", isUsernameMode);
+  usernameFieldGroup?.classList.toggle("hidden", !isUsernameMode);
+
+  if (newUserEmailInput) {
+    newUserEmailInput.required = !isUsernameMode;
+  }
+
+  if (newUserUsernameInput) {
+    newUserUsernameInput.required = isUsernameMode;
+  }
+}
+
+userLoginTypeSelect?.addEventListener("change", updateUserLoginTypeUI);
+
+updateUserLoginTypeUI();
 
 function fileToBase64(file) {
   return new Promise((resolve, reject) => {
@@ -681,6 +726,9 @@ function resetUserForm() {
   createUserForm.reset();
   if (editUserIdInput) editUserIdInput.value = "";
   if (saveUserBtn) saveUserBtn.textContent = "Benutzer anlegen";
+  if (userLoginTypeSelect) userLoginTypeSelect.value = "email";
+  if (newUserUsernameInput) newUserUsernameInput.value = "";
+  updateUserLoginTypeUI();
   setCreateUserMessage("");
 }
 
@@ -690,7 +738,22 @@ function fillUserFormForEdit(user) {
   if (editUserIdInput) editUserIdInput.value = user.id;
 
   document.getElementById("new-user-name").value = user.name || "";
-  document.getElementById("new-user-email").value = user.email || "";
+  const isUsernameUser = user.hasRealEmail === false || isSyntheticPortalEmail(user.email || "");
+
+  if (userLoginTypeSelect) {
+    userLoginTypeSelect.value = isUsernameUser ? "username" : "email";
+  }
+  updateUserLoginTypeUI();
+
+  if (newUserEmailInput) {
+    newUserEmailInput.value = isUsernameUser ? "" : (user.email || "");
+  }
+
+  if (newUserUsernameInput) {
+    newUserUsernameInput.value = isUsernameUser
+      ? String(user.username || (user.email || "").replace(/@portal\.local$/i, ""))
+      : "";
+  }
   document.getElementById("new-user-password").value = "";
   document.getElementById("new-user-role").value = user.role || "employee";
   document.getElementById("new-user-active").value = String(user.active !== false);
@@ -898,8 +961,8 @@ async function renderSupervisorView(profile) {
     employeeList.appendChild(createInfoCard({
       title: employee.name || employee.email,
       lines: [
-        `E-Mail: ${employee.email || "-"}`,
-        `Bereiche: ${(employee.bereiche || []).join(", ") || "-"}`, ,
+        `Login: ${employee.hasRealEmail === false ? (employee.username || "-") : (employee.email || "-")}`
+          `Bereiche: ${(employee.bereiche || []).join(", ") || "-"}`, ,
         `Zusatzschulungen: ${formatExtraTrainingTitles(employee, trainings)}`,
         `Letzter Login: ${formatDate(employee.lastLogin)}`
       ],
@@ -1017,11 +1080,12 @@ async function loadAdminUsers() {
 
   users.forEach((user) => {
     list.appendChild(createInfoCard({
-      title: user.email,
+      title: user.name || user.username || user.email,
       lines: [
         `Rolle: ${user.role}`,
         `Bereiche: ${(user.bereiche || []).join(", ")}`,
         `Zusatzschulungen: ${formatExtraTrainingTitles(user, trainings)}`
+          `Login: ${user.hasRealEmail === false ? (user.username || "-") : (user.email || "-")}`,
       ],
       status: user.active === false ? "inaktiv" : "aktiv",
       buttonText: "Bearbeiten",
@@ -1207,11 +1271,12 @@ loginForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   setMessage("");
 
-  const email = loginEmail.value.trim();
+  const loginValue = loginEmail.value.trim();
   const password = loginPassword.value.trim();
+  const email = normalizeLoginIdentifier(loginValue);
 
-  if (!email || !password) {
-    setMessage("Bitte E-Mail und Passwort eingeben.");
+  if (!loginValue || !password) {
+    setMessage("Bitte E-Mail bzw. Benutzername und Passwort eingeben.");
     return;
   }
 
@@ -1225,11 +1290,17 @@ loginForm.addEventListener("submit", async (event) => {
 });
 
 resetPasswordBtn.addEventListener("click", async () => {
-  const email = loginEmail.value.trim();
+  const loginValue = loginEmail.value.trim();
+  const email = normalizeLoginIdentifier(loginValue);
   setMessage("");
 
-  if (!email) {
-    setMessage("Bitte zuerst die E-Mail-Adresse eingeben.");
+  if (!loginValue) {
+    setMessage("Bitte zuerst E-Mail oder Benutzername eingeben.");
+    return;
+  }
+
+  if (isSyntheticPortalEmail(email)) {
+    setMessage("Für Nutzer ohne E-Mail-Adresse richten wir als Nächstes einen eigenen Reset-Ablauf ein.");
     return;
   }
 
@@ -1276,9 +1347,15 @@ createUserForm?.addEventListener("submit", async (event) => {
     const userId = editUserIdInput?.value || "";
 
     const name = document.getElementById("new-user-name").value.trim();
-    const email = document.getElementById("new-user-email").value.trim();
+    const loginType = userLoginTypeSelect?.value || "email";
+    const rawEmail = newUserEmailInput?.value.trim() || "";
+    const rawUsername = newUserUsernameInput?.value.trim() || "";
     const password = document.getElementById("new-user-password").value.trim();
     const role = document.getElementById("new-user-role").value;
+
+    const hasRealEmail = loginType === "email";
+    const username = hasRealEmail ? "" : rawUsername.toLowerCase();
+    const email = hasRealEmail ? rawEmail.toLowerCase() : toSyntheticEmail(username);
     const bereiche = Array.from(
       document.querySelectorAll('#new-user-bereiche input[type="checkbox"]:checked')
     ).map((checkbox) => parseInt(checkbox.value, 10));
@@ -1290,8 +1367,18 @@ createUserForm?.addEventListener("submit", async (event) => {
     const endDate = document.getElementById("new-user-end").value;
     const active = document.getElementById("new-user-active").value === "true";
 
-    if (!name || !email || !role) {
+    if (!name || !role) {
       setCreateUserMessage("Bitte alle Pflichtfelder ausfüllen.", true);
+      return;
+    }
+
+    if (hasRealEmail && !rawEmail) {
+      setCreateUserMessage("Bitte eine E-Mail-Adresse eingeben.", true);
+      return;
+    }
+
+    if (!hasRealEmail && !username) {
+      setCreateUserMessage("Bitte einen Benutzernamen eingeben.", true);
       return;
     }
 
@@ -1304,7 +1391,9 @@ createUserForm?.addEventListener("submit", async (event) => {
       startDate,
       endDate,
       active,
-      extraTrainings
+      extraTrainings,
+      username,
+      hasRealEmail
     };
 
     if (userId) {

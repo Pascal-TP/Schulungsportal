@@ -25,22 +25,21 @@
           <div class="hero-overlay">
             <h1>Sicherheitsschulungen für Mitarbeiter</h1>
             <p>
-              Bitte melden Sie sich mit Ihrer E-Mail-Adresse und Ihrem Passwort an.
+              Bitte melden Sie sich mit Ihrer E-Mail-Adresse oder Ihrem Benutzernamen und Ihrem Passwort an.
             </p>
 
-            <form id="login-form" class="form-card">
-              <label for="login-email">E-Mail</label>
-              <input type="email" id="login-email" placeholder="name@firma.de" required />
+            <label for="login-email">E-Mail oder Benutzername</label>
+            <input type="text" id="login-email" placeholder="name@firma.de oder benutzername" required />
 
-              <label for="login-password">Passwort</label>
-              <input type="password" id="login-password" placeholder="Passwort" required />
+            <label for="login-password">Passwort</label>
+            <input type="password" id="login-password" placeholder="Passwort" required />
 
-              <button type="submit" class="primary-btn">Anmelden</button>
-              <button type="button" id="reset-password-btn" class="secondary-btn">
-                Passwort zurücksetzen
-              </button>
+            <button type="submit" class="primary-btn">Anmelden</button>
+            <button type="button" id="reset-password-btn" class="secondary-btn">
+              Passwort zurücksetzen
+            </button>
 
-              <p id="login-message" class="message-box"></p>
+            <p id="login-message" class="message-box"></p>
             </form>
           </div>
         </div>
@@ -140,8 +139,21 @@
               <input type="text" id="new-user-name" placeholder="Max Mustermann" required />
               <input type="hidden" id="edit-user-id" />
 
-              <label for="new-user-email">E-Mail</label>
-              <input type="email" id="new-user-email" placeholder="max@firma.de" required />
+              <label for="new-user-login-type">Anmeldetyp</label>
+              <select id="new-user-login-type">
+                <option value="email">Nutzer mit E-Mail-Adresse</option>
+                <option value="username">Nutzer ohne E-Mail-Adresse (Benutzername)</option>
+              </select>
+
+              <div id="email-field-group">
+                <label for="new-user-email">E-Mail</label>
+                <input type="email" id="new-user-email" placeholder="max@firma.de" />
+              </div>
+
+              <div id="username-field-group" class="hidden">
+                <label for="new-user-username">Benutzername</label>
+                <input type="text" id="new-user-username" placeholder="z. B. mueller1" />
+              </div>
 
               <label for="new-user-password">Start-Passwort</label>
               <input type="text" id="new-user-password" placeholder="Start1234!" />
