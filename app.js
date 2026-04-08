@@ -39,12 +39,14 @@ const uploadTrainingProofFn = httpsCallable(functions, "uploadTrainingProof");
 const deleteTrainingProofFn = httpsCallable(functions, "deleteTrainingProof");
 const getTrainingProofDownloadUrlFn = httpsCallable(functions, "getTrainingProofDownloadUrl");
 const getEmployeeProofDownloadsFn = httpsCallable(functions, "getEmployeeProofDownloads");
+const requestPasswordResetForUsernameFn = httpsCallable(functions, "requestPasswordResetForUsername");
 
 const loginForm = document.getElementById("login-form");
 const loginEmail = document.getElementById("login-email");
 const loginPassword = document.getElementById("login-password");
 const loginMessage = document.getElementById("login-message");
 const resetPasswordBtn = document.getElementById("reset-password-btn");
+const resetUsernamePasswordBtn = document.getElementById("reset-username-password-btn");
 const changePasswordBtn = document.getElementById("change-password-btn");
 const logoutBtn = document.getElementById("logout-btn");
 const userRoleBadge = document.getElementById("user-role-badge");
@@ -63,6 +65,7 @@ const newUserEmailInput = document.getElementById("new-user-email");
 const newUserUsernameInput = document.getElementById("new-user-username");
 const emailFieldGroup = document.getElementById("email-field-group");
 const usernameFieldGroup = document.getElementById("username-field-group");
+
 
 const pageIds = ["page-login", "page-employee", "page-supervisor", "page-admin"];
 let currentAuthUser = null;
@@ -1300,7 +1303,7 @@ resetPasswordBtn.addEventListener("click", async () => {
   }
 
   if (isSyntheticPortalEmail(email)) {
-    setMessage("Für Nutzer ohne E-Mail-Adresse richten wir als Nächstes einen eigenen Reset-Ablauf ein.");
+    setMessage("Für Nutzer ohne E-Mail-Adresse bitte den Button 'Passwort vergessen für Nutzer ohne E-Mail-Adresse' verwenden.");
     return;
   }
 
@@ -1310,6 +1313,32 @@ resetPasswordBtn.addEventListener("click", async () => {
   } catch (error) {
     console.error(error);
     setMessage("Passwort-Reset konnte nicht ausgelöst werden.");
+  }
+});
+
+resetUsernamePasswordBtn?.addEventListener("click", async () => {
+  const username = loginEmail.value.trim();
+  setMessage("");
+
+  if (!username) {
+    setMessage("Bitte zuerst den Benutzernamen eingeben.");
+    return;
+  }
+
+  if (username.includes("@")) {
+    setMessage("Dieser Button ist nur für Nutzer ohne E-Mail-Adresse gedacht.");
+    return;
+  }
+
+  try {
+    await requestPasswordResetForUsernameFn({
+      username
+    });
+
+    setMessage("Die Admins wurden informiert. Bitte warten Sie auf ein neues Passwort.");
+  } catch (error) {
+    console.error(error);
+    setMessage(error?.message || "Die Anfrage konnte nicht gesendet werden.");
   }
 });
 
