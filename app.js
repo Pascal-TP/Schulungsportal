@@ -962,7 +962,7 @@ async function renderSupervisorView(profile) {
       title: employee.name || employee.email,
       lines: [
         `Login: ${employee.hasRealEmail === false ? (employee.username || "-") : (employee.email || "-")}`
-          `Bereiche: ${(employee.bereiche || []).join(", ") || "-"}`, ,
+          `Bereiche: ${(employee.bereiche || []).join(", ") || "-"}`,
         `Zusatzschulungen: ${formatExtraTrainingTitles(employee, trainings)}`,
         `Letzter Login: ${formatDate(employee.lastLogin)}`
       ],
