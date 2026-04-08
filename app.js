@@ -961,8 +961,8 @@ async function renderSupervisorView(profile) {
     employeeList.appendChild(createInfoCard({
       title: employee.name || employee.email,
       lines: [
-        `Login: ${employee.hasRealEmail === false ? (employee.username || "-") : (employee.email || "-")}`
-          `Bereiche: ${(employee.bereiche || []).join(", ") || "-"}`,
+        `Login: ${employee.hasRealEmail === false ? (employee.username || "-") : (employee.email || "-")}`,
+        `Bereiche: ${(employee.bereiche || []).join(", ") || "-"}`,
         `Zusatzschulungen: ${formatExtraTrainingTitles(employee, trainings)}`,
         `Letzter Login: ${formatDate(employee.lastLogin)}`
       ],
@@ -1083,9 +1083,9 @@ async function loadAdminUsers() {
       title: user.name || user.username || user.email,
       lines: [
         `Rolle: ${user.role}`,
-        `Bereiche: ${(user.bereiche || []).join(", ")}`,
-        `Zusatzschulungen: ${formatExtraTrainingTitles(user, trainings)}`
-          `Login: ${user.hasRealEmail === false ? (user.username || "-") : (user.email || "-")}`,
+        `Bereiche: ${(user.bereiche || []).join(", ") || "-"}`,
+        `Zusatzschulungen: ${formatExtraTrainingTitles(user, trainings)}`,
+        `Login: ${user.hasRealEmail === false ? (user.username || "-") : (user.email || "-")}`,
       ],
       status: user.active === false ? "inaktiv" : "aktiv",
       buttonText: "Bearbeiten",

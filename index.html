@@ -28,16 +28,17 @@
               Bitte melden Sie sich mit Ihrer E-Mail-Adresse oder Ihrem Benutzernamen und Ihrem Passwort an.
             </p>
 
-            <label for="login-email">E-Mail oder Benutzername</label>
-            <input type="text" id="login-email" placeholder="name@firma.de oder benutzername" required />
-            <br><br>
-            <label for="login-password">Passwort</label>
-            <input type="password" id="login-password" placeholder="Passwort" required />
-            <br><br>
-            <button type="submit" class="primary-btn">Anmelden</button><br><br>
-            <button type="button" id="reset-password-btn" class="secondary-btn">Passwort zurücksetzen</button>
+            <form id="login-form" class="form-card">
+              <label for="login-email">E-Mail oder Benutzername</label>
+              <input type="text" id="login-email" placeholder="name@firma.de oder benutzername" required />
 
-            <p id="login-message" class="message-box"></p>
+              <label for="login-password">Passwort</label>
+              <input type="password" id="login-password" placeholder="Passwort" required />
+
+              <button type="submit" class="primary-btn">Anmelden</button>
+              <button type="button" id="reset-password-btn" class="secondary-btn">Passwort zurücksetzen</button>
+
+              <p id="login-message" class="message-box"></p>
             </form>
           </div>
         </div>
