@@ -554,10 +554,21 @@ async function getAllTrainings() {
 
 function getVisibleTrainingsForProfile(trainings, profile) {
   const userBereiche = Array.isArray(profile.bereiche) ? profile.bereiche : [];
+  const extraTrainings = Array.isArray(profile.extraTrainings) ? profile.extraTrainings : [];
+
   return trainings.filter((training) => {
     if (training.active === false) return false;
-    if (!Array.isArray(training.bereiche) || training.bereiche.length === 0) return true;
-    return training.bereiche.some((bereich) => userBereiche.includes(bereich));
+
+    // 1. Bereich passt
+    const matchesBereich =
+      !Array.isArray(training.bereiche) ||
+      training.bereiche.length === 0 ||
+      training.bereiche.some((bereich) => userBereiche.includes(bereich));
+
+    // 2. Oder individuell zugewiesen
+    const isExtra = extraTrainings.includes(training.id);
+
+    return matchesBereich || isExtra;
   });
 }
 
@@ -658,6 +669,13 @@ function fillUserFormForEdit(user) {
       checkbox.checked = Array.isArray(user.bereiche) && user.bereiche.includes(value);
     });
 
+  document
+    .querySelectorAll('#new-user-extra-trainings input[type="checkbox"]')
+    .forEach((checkbox) => {
+      checkbox.checked = Array.isArray(user.extraTrainings) &&
+        user.extraTrainings.includes(checkbox.value);
+    });
+
   if (saveUserBtn) saveUserBtn.textContent = "Benutzer speichern";
   setCreateUserMessage("Bearbeitungsmodus aktiv.", false);
 }
@@ -694,6 +712,29 @@ async function markTrainingCompleted(userId, training) {
     status: "completed",
     completedAt: serverTimestamp()
   }, { merge: true });
+}
+
+async function loadTrainingCheckboxesForUserForm() {
+  const container = document.getElementById("new-user-extra-trainings");
+  if (!container) return;
+
+  container.innerHTML = "";
+
+  const trainings = await getAllTrainings();
+
+  trainings.forEach((training) => {
+    const label = document.createElement("label");
+    label.style.display = "block";
+
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.value = training.id;
+
+    label.appendChild(checkbox);
+    label.appendChild(document.createTextNode(" " + training.title));
+
+    container.appendChild(label);
+  });
 }
 
 async function getEmployeesForSupervisor(supervisorId) {
@@ -869,6 +910,7 @@ async function renderAdminView(profile) {
     `Willkommen ${profile.name || ""}. Hier befindet sich der Verwaltungsbereich.`;
   await loadSupervisorOptions();
   await renderAdminProofOverview();
+  await loadTrainingCheckboxesForUserForm();
 
   const ownTrainingList = document.getElementById("admin-own-training-list");
   const ownProgressList = document.getElementById("admin-own-progress-list");
@@ -1201,7 +1243,9 @@ createUserForm?.addEventListener("submit", async (event) => {
     const bereiche = Array.from(
       document.querySelectorAll('#new-user-bereiche input[type="checkbox"]:checked')
     ).map((checkbox) => parseInt(checkbox.value, 10));
-
+    const extraTrainings = Array.from(
+      document.querySelectorAll('#new-user-extra-trainings input[type="checkbox"]:checked')
+    ).map(cb => cb.value);
     const supervisorId = document.getElementById("new-user-supervisor").value;
     const startDate = document.getElementById("new-user-start").value;
     const endDate = document.getElementById("new-user-end").value;
@@ -1220,7 +1264,8 @@ createUserForm?.addEventListener("submit", async (event) => {
       supervisorId,
       startDate,
       endDate,
-      active
+      active,
+      extraTrainings
     };
 
     if (userId) {
