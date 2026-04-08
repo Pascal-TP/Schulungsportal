@@ -211,6 +211,21 @@ function formatFileSize(bytes) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+function formatExtraTrainingTitles(user, trainings = []) {
+  const extraIds = Array.isArray(user?.extraTrainings) ? user.extraTrainings : [];
+
+  if (extraIds.length === 0) {
+    return "-";
+  }
+
+  const titles = extraIds.map((id) => {
+    const training = trainings.find((t) => t.id === id);
+    return training?.title || id;
+  });
+
+  return titles.join(", ");
+}
+
 async function getTrainingProgressDoc(userId, trainingId) {
   const progressId = `${userId}_${trainingId}`;
   const progressRef = doc(db, "trainingProgress", progressId);
@@ -863,7 +878,8 @@ async function renderSupervisorView(profile) {
       title: employee.name || employee.email,
       lines: [
         `E-Mail: ${employee.email || "-"}`,
-        `Bereiche: ${(employee.bereiche || []).join(", ") || "-"}`,
+        `Bereiche: ${(employee.bereiche || []).join(", ") || "-"}`, ,
+        `Zusatzschulungen: ${formatExtraTrainingTitles(employee, trainings)}`,
         `Letzter Login: ${formatDate(employee.lastLogin)}`
       ],
       status: employee.active === false ? "inaktiv" : "aktiv"
@@ -968,6 +984,7 @@ async function loadAdminUsers() {
 
   const snap = await getDocs(collection(db, "users"));
   const users = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  const trainings = await getAllTrainings();
 
   if (users.length === 0) {
     list.appendChild(createInfoCard({
@@ -982,7 +999,8 @@ async function loadAdminUsers() {
       title: user.email,
       lines: [
         `Rolle: ${user.role}`,
-        `Bereiche: ${(user.bereiche || []).join(", ")}`
+        `Bereiche: ${(user.bereiche || []).join(", ")}`,
+        `Zusatzschulungen: ${formatExtraTrainingTitles(user, trainings)}`
       ],
       status: user.active === false ? "inaktiv" : "aktiv",
       buttonText: "Bearbeiten",
