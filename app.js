@@ -36,6 +36,8 @@ const db = getFirestore(portalApp);
 const functions = getFunctions(blazeApp, "europe-west1");
 const uploadTrainingProofFn = httpsCallable(functions, "uploadTrainingProof");
 const deleteTrainingProofFn = httpsCallable(functions, "deleteTrainingProof");
+const getTrainingProofDownloadUrlFn = httpsCallable(functions, "getTrainingProofDownloadUrl");
+const getEmployeeProofDownloadsFn = httpsCallable(functions, "getEmployeeProofDownloads");
 
 const loginForm = document.getElementById("login-form");
 const loginEmail = document.getElementById("login-email");
@@ -83,6 +85,66 @@ function fileToBase64(file) {
 
     reader.readAsDataURL(file);
   });
+}
+
+async function getPortalIdToken() {
+  if (!currentAuthUser) {
+    throw new Error("Nicht angemeldet.");
+  }
+  return await currentAuthUser.getIdToken();
+}
+
+function triggerBrowserDownload(url, fileName = "") {
+  const a = document.createElement("a");
+  a.href = url;
+  a.target = "_blank";
+  a.rel = "noopener noreferrer";
+  if (fileName) {
+    a.download = fileName;
+  }
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
+
+async function downloadSingleTrainingProof(employeeId, trainingId) {
+  const idToken = await getPortalIdToken();
+
+  const result = await getTrainingProofDownloadUrlFn({
+    idToken,
+    employeeId,
+    trainingId
+  });
+
+  const data = result.data || {};
+
+  if (!data.url) {
+    throw new Error("Download-Link konnte nicht erzeugt werden.");
+  }
+
+  triggerBrowserDownload(data.url, data.fileName || "");
+}
+
+async function downloadAllProofsForEmployee(employeeId) {
+  const idToken = await getPortalIdToken();
+
+  const result = await getEmployeeProofDownloadsFn({
+    idToken,
+    employeeId
+  });
+
+  const data = result.data || {};
+  const files = Array.isArray(data.files) ? data.files : [];
+
+  if (files.length === 0) {
+    alert("Für diesen Mitarbeiter liegen keine Nachweise vor.");
+    return;
+  }
+
+  for (const file of files) {
+    triggerBrowserDownload(file.url, file.fileName || "");
+    await new Promise((resolve) => setTimeout(resolve, 350));
+  }
 }
 
 function setMessage(text = "") {
@@ -526,17 +588,17 @@ async function renderEmployeeView(profile) {
   }
 
   visibleTrainings.forEach((training) => {
-  const progress = progressEntries.find((entry) => entry.trainingId === training.id);
+    const progress = progressEntries.find((entry) => entry.trainingId === training.id);
 
-  trainingList.appendChild(createTrainingActionCard({
-    userId: profile.id,
-    training,
-    progress,
-    rerender: async () => {
-      await renderEmployeeView(profile);
-    }
-  }));
-});
+    trainingList.appendChild(createTrainingActionCard({
+      userId: profile.id,
+      training,
+      progress,
+      rerender: async () => {
+        await renderEmployeeView(profile);
+      }
+    }));
+  });
 
   if (progressEntries.length === 0) {
     progressList.appendChild(createInfoCard({
@@ -546,16 +608,16 @@ async function renderEmployeeView(profile) {
   }
 
   progressEntries.forEach((entry) => {
-  progressList.appendChild(createInfoCard({
-    title: entry.trainingTitle || "Schulung",
-    lines: [
-      `Geöffnet: ${formatDate(entry.openedAt)}`,
-      `Abgeschlossen: ${formatDate(entry.completedAt)}`,
-      `Nachweis: ${entry.proofName || "-"}`
-    ],
-    status: entry.status || "offen"
-  }));
-});
+    progressList.appendChild(createInfoCard({
+      title: entry.trainingTitle || "Schulung",
+      lines: [
+        `Geöffnet: ${formatDate(entry.openedAt)}`,
+        `Abgeschlossen: ${formatDate(entry.completedAt)}`,
+        `Nachweis: ${entry.proofName || "-"}`
+      ],
+      status: entry.status || "offen"
+    }));
+  });
 }
 
 async function updateUserProfile(userId, data) {
@@ -640,6 +702,50 @@ async function getEmployeesForSupervisor(supervisorId) {
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 }
 
+async function renderAdminProofOverview() {
+  const list = document.getElementById("admin-proof-overview-list");
+  if (!list) return;
+
+  list.innerHTML = "";
+
+  const usersSnap = await getDocs(collection(db, "users"));
+  const users = usersSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  const employees = users.filter((user) => user.role === "employee");
+
+  if (employees.length === 0) {
+    list.appendChild(createInfoCard({
+      title: "Keine Mitarbeiter vorhanden",
+      lines: ["Aktuell sind keine Mitarbeiterprofile vorhanden."]
+    }));
+    return;
+  }
+
+  for (const employee of employees) {
+    const progressEntries = await getProgressEntriesForUser(employee.id);
+    const proofEntries = progressEntries.filter((entry) => entry.proofPath && entry.proofName);
+
+    list.appendChild(createInfoCard({
+      title: employee.name || employee.email,
+      lines: [
+        `E-Mail: ${employee.email || "-"}`,
+        `Nachweise vorhanden: ${proofEntries.length}`
+      ],
+      status: proofEntries.length > 0 ? "Download möglich" : "kein Nachweis",
+      buttonText: proofEntries.length > 0 ? "Alle Nachweise herunterladen" : "",
+      onClick: proofEntries.length > 0
+        ? async () => {
+          try {
+            await downloadAllProofsForEmployee(employee.id);
+          } catch (error) {
+            console.error(error);
+            alert("Sammel-Download konnte nicht gestartet werden.");
+          }
+        }
+        : null
+    }));
+  }
+}
+
 async function renderSupervisorView(profile) {
   document.getElementById("supervisor-welcome").textContent =
     `Willkommen ${profile.name || ""}. Hier sehen Sie Ihre eigenen Schulungen und den Stand Ihrer Mitarbeiter.`;
@@ -659,17 +765,17 @@ async function renderSupervisorView(profile) {
   const ownProgressEntries = await getProgressEntriesForUser(profile.id);
 
   visibleTrainings.forEach((training) => {
-  const progress = ownProgressEntries.find((entry) => entry.trainingId === training.id);
+    const progress = ownProgressEntries.find((entry) => entry.trainingId === training.id);
 
-  ownTrainingList.appendChild(createTrainingActionCard({
-    userId: profile.id,
-    training,
-    progress,
-    rerender: async () => {
-      await renderSupervisorView(profile);
-    }
-  }));
-});
+    ownTrainingList.appendChild(createTrainingActionCard({
+      userId: profile.id,
+      training,
+      progress,
+      rerender: async () => {
+        await renderSupervisorView(profile);
+      }
+    }));
+  });
 
   if (visibleTrainings.length === 0) {
     ownTrainingList.appendChild(createInfoCard({
@@ -686,16 +792,16 @@ async function renderSupervisorView(profile) {
   }
 
   ownProgressEntries.forEach((entry) => {
-  ownProgressList.appendChild(createInfoCard({
-    title: entry.trainingTitle || "Schulung",
-    lines: [
-      `Geöffnet: ${formatDate(entry.openedAt)}`,
-      `Abgeschlossen: ${formatDate(entry.completedAt)}`,
-      `Nachweis: ${entry.proofName || "-"}`
-    ],
-    status: entry.status || "offen"
-  }));
-});
+    ownProgressList.appendChild(createInfoCard({
+      title: entry.trainingTitle || "Schulung",
+      lines: [
+        `Geöffnet: ${formatDate(entry.openedAt)}`,
+        `Abgeschlossen: ${formatDate(entry.completedAt)}`,
+        `Nachweis: ${entry.proofName || "-"}`
+      ],
+      status: entry.status || "offen"
+    }));
+  });
 
   const employees = await getEmployeesForSupervisor(profile.id);
 
@@ -734,16 +840,27 @@ async function renderSupervisorView(profile) {
     }
 
     progressEntries.forEach((entry) => {
-  progressList.appendChild(createInfoCard({
-    title: `${employee.name || employee.email} – ${entry.trainingTitle || "Schulung"}`,
-    lines: [
-      `Geöffnet: ${formatDate(entry.openedAt)}`,
-      `Abgeschlossen: ${formatDate(entry.completedAt)}`,
-      `Nachweis: ${entry.proofName || "-"}`
-    ],
-    status: entry.status || "offen"
-  }));
-});
+      progressList.appendChild(createInfoCard({
+        title: `${employee.name || employee.email} – ${entry.trainingTitle || "Schulung"}`,
+        lines: [
+          `Geöffnet: ${formatDate(entry.openedAt)}`,
+          `Abgeschlossen: ${formatDate(entry.completedAt)}`,
+          `Nachweis: ${entry.proofName || "-"}`
+        ],
+        status: entry.status || "offen",
+        buttonText: entry.proofPath ? "Nachweis herunterladen" : "",
+        onClick: entry.proofPath
+          ? async () => {
+            try {
+              await downloadSingleTrainingProof(employee.id, entry.trainingId);
+            } catch (error) {
+              console.error(error);
+              alert("Nachweis konnte nicht heruntergeladen werden.");
+            }
+          }
+          : null
+      }));
+    });
   }
 }
 
@@ -751,6 +868,7 @@ async function renderAdminView(profile) {
   document.getElementById("admin-welcome").textContent =
     `Willkommen ${profile.name || ""}. Hier befindet sich der Verwaltungsbereich.`;
   await loadSupervisorOptions();
+  await renderAdminProofOverview();
 
   const ownTrainingList = document.getElementById("admin-own-training-list");
   const ownProgressList = document.getElementById("admin-own-progress-list");
@@ -775,31 +893,31 @@ async function renderAdminView(profile) {
     }));
   }
 
- ownProgressEntries.forEach((entry) => {
-  ownProgressList.appendChild(createInfoCard({
-    title: entry.trainingTitle || "Schulung",
-    lines: [
-      `Geöffnet: ${formatDate(entry.openedAt)}`,
-      `Abgeschlossen: ${formatDate(entry.completedAt)}`,
-      `Nachweis: ${entry.proofName || "-"}`
-    ],
-    status: entry.status || "offen"
-  }));
-});
+  ownProgressEntries.forEach((entry) => {
+    ownProgressList.appendChild(createInfoCard({
+      title: entry.trainingTitle || "Schulung",
+      lines: [
+        `Geöffnet: ${formatDate(entry.openedAt)}`,
+        `Abgeschlossen: ${formatDate(entry.completedAt)}`,
+        `Nachweis: ${entry.proofName || "-"}`
+      ],
+      status: entry.status || "offen"
+    }));
+  });
 
   visibleTrainings.forEach((training) => {
-  const progress = ownProgressEntries.find((entry) => entry.trainingId === training.id);
+    const progress = ownProgressEntries.find((entry) => entry.trainingId === training.id);
 
-  ownTrainingList.appendChild(createTrainingActionCard({
-    userId: profile.id,
-    training,
-    progress,
-    rerender: async () => {
-      await renderAdminView(profile);
-    },
-    showBereiche: true
-  }));
-});
+    ownTrainingList.appendChild(createTrainingActionCard({
+      userId: profile.id,
+      training,
+      progress,
+      rerender: async () => {
+        await renderAdminView(profile);
+      },
+      showBereiche: true
+    }));
+  });
 }
 
 async function loadAdminUsers() {
