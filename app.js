@@ -897,11 +897,14 @@ async function renderAdminTrainingMatrix() {
 
   const usersSnap = await getDocs(collection(db, "users"));
   const users = usersSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
-  const employees = users.filter((user) => user.role === "employee" && user.active !== false);
+  const usersForMatrix = users.filter((user) =>
+    ["employee", "supervisor", "admin"].includes(user.role) &&
+    user.active !== false
+  );
 
   const trainings = (await getAllTrainings()).filter((training) => training.active !== false);
 
-  if (employees.length === 0 || trainings.length === 0) {
+  if (usersForMatrix.length === 0 || trainings.length === 0) {
     const tbody = document.createElement("tbody");
     const row = document.createElement("tr");
     const cell = document.createElement("td");
@@ -933,16 +936,25 @@ async function renderAdminTrainingMatrix() {
 
   const tbody = document.createElement("tbody");
 
-  for (const employee of employees) {
+  for (const employee of usersForMatrix) {
     const row = document.createElement("tr");
 
     const employeeCell = document.createElement("td");
     employeeCell.className = "employee-col";
-    employeeCell.textContent =
+    const displayName =
       employee.name ||
       employee.username ||
       employee.email ||
       "Unbekannt";
+
+    const roleLabel =
+      employee.role === "admin"
+        ? "Admin"
+        : employee.role === "supervisor"
+          ? "Vorgesetzter"
+          : "Mitarbeiter";
+
+    employeeCell.textContent = `${displayName} (${roleLabel})`;
     row.appendChild(employeeCell);
 
     const visibleTrainings = getVisibleTrainingsForProfile(trainings, employee);
