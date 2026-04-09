@@ -295,22 +295,9 @@ function formatExtraTrainingTitles(user, trainings = []) {
   return titles.join(", ");
 }
 
-async function getTrainingProgressDoc(userId, trainingId) {
-  const progressId = `${userId}_${trainingId}`;
-  const progressRef = doc(db, "trainingProgress", progressId);
-  const snap = await getDoc(progressRef);
-
-  return {
-    progressId,
-    progressRef,
-    exists: snap.exists(),
-    data: snap.exists() ? snap.data() : null
-  };
-}
-
 async function trainingHasProof(userId, trainingId) {
-  const progressDoc = await getTrainingProgressDoc(userId, trainingId);
-  return !!(progressDoc.data?.proofPath && progressDoc.data?.proofName);
+  const entry = await getExistingTrainingProgressEntry(userId, trainingId);
+  return !!(entry?.proofPath && entry?.proofName);
 }
 
 async function uploadTrainingProof(userId, training, file, statusElement) {
@@ -340,13 +327,14 @@ async function uploadTrainingProof(userId, training, file, statusElement) {
     statusElement.textContent = "Datei wird hochgeladen...";
   }
 
-  const progressDoc = await getTrainingProgressDoc(userId, training.id);
+  const progressRef = getTrainingProgressRef(userId, training.id);
+  const existingProgress = await getExistingTrainingProgressEntry(userId, training.id);
 
   // Alte Datei löschen
-  if (progressDoc.data?.proofPath) {
+  if (existingProgress?.proofPath) {
     try {
       await deleteTrainingProofFn({
-        proofPath: progressDoc.data.proofPath
+        proofPath: existingProgress.proofPath
       });
     } catch (error) {
       console.warn("Alter Nachweis konnte nicht gelöscht werden:", error);
@@ -364,7 +352,7 @@ async function uploadTrainingProof(userId, training, file, statusElement) {
 
   const uploadData = result.data || {};
 
-  await setDoc(progressDoc.progressRef, {
+  await setDoc(progressRef, {
     userId,
     trainingId: training.id,
     trainingTitle: training.title || "Schulung",
@@ -377,19 +365,20 @@ async function uploadTrainingProof(userId, training, file, statusElement) {
 }
 
 async function deleteTrainingProof(userId, trainingId) {
-  const progressDoc = await getTrainingProgressDoc(userId, trainingId);
+  const progressRef = getTrainingProgressRef(userId, trainingId);
+  const existingProgress = await getExistingTrainingProgressEntry(userId, trainingId);
 
-  if (progressDoc.data?.proofPath) {
+  if (existingProgress?.proofPath) {
     try {
       await deleteTrainingProofFn({
-        proofPath: progressDoc.data.proofPath
+        proofPath: existingProgress.proofPath
       });
     } catch (error) {
       console.warn("Nachweis konnte nicht aus Storage gelöscht werden:", error);
     }
   }
 
-  await setDoc(progressDoc.progressRef, {
+  await setDoc(progressRef, {
     proofName: null,
     proofPath: null,
     proofSize: null,
@@ -662,6 +651,16 @@ async function getProgressEntriesForUser(userId) {
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 }
 
+function getTrainingProgressRef(userId, trainingId) {
+  const progressId = `${userId}_${trainingId}`;
+  return doc(db, "trainingProgress", progressId);
+}
+
+async function getExistingTrainingProgressEntry(userId, trainingId) {
+  const entries = await getProgressEntriesForUser(userId);
+  return entries.find((entry) => entry.trainingId === trainingId) || null;
+}
+
 async function renderEmployeeView(profile) {
   document.getElementById("employee-welcome").textContent =
     `Willkommen ${profile.name || ""}. Hier sehen Sie Ihre freigegebenen Schulungen.`;
@@ -801,13 +800,14 @@ async function markTrainingOpened(userId, training) {
 async function markTrainingCompleted(userId, training) {
   if (!userId || !training?.id) return;
 
-  const progressDoc = await getTrainingProgressDoc(userId, training.id);
+  const progressRef = getTrainingProgressRef(userId, training.id);
+  const existingProgress = await getExistingTrainingProgressEntry(userId, training.id);
 
-  if (!progressDoc.data?.proofPath || !progressDoc.data?.proofName) {
+  if (!existingProgress?.proofPath || !existingProgress?.proofName) {
     throw new Error("Wählen Sie eine Datei mit dem Nachweis aus.");
   }
 
-  await setDoc(progressDoc.progressRef, {
+  await setDoc(progressRef, {
     userId,
     trainingId: training.id,
     trainingTitle: training.title || "Schulung",
