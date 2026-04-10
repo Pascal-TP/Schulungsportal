@@ -994,6 +994,95 @@ async function renderAdminTrainingMatrix() {
   table.appendChild(tbody);
 }
 
+async function renderSupervisorTrainingMatrix(profile) {
+  const table = document.getElementById("supervisor-training-matrix");
+  if (!table) return;
+
+  table.innerHTML = "";
+
+  const trainings = (await getAllTrainings()).filter((training) => training.active !== false);
+  const employees = await getEmployeesForSupervisor(profile.id);
+
+  if (employees.length === 0 || trainings.length === 0) {
+    const tbody = document.createElement("tbody");
+    const row = document.createElement("tr");
+    const cell = document.createElement("td");
+    cell.className = "matrix-empty";
+    cell.textContent = "Keine Mitarbeiter oder keine aktiven Schulungen vorhanden.";
+    cell.colSpan = Math.max(1, trainings.length + 1);
+    row.appendChild(cell);
+    tbody.appendChild(row);
+    table.appendChild(tbody);
+    return;
+  }
+
+  const thead = document.createElement("thead");
+  const headRow = document.createElement("tr");
+
+  const firstHead = document.createElement("th");
+  firstHead.textContent = "Mitarbeiter";
+  firstHead.className = "employee-col";
+  headRow.appendChild(firstHead);
+
+  trainings.forEach((training) => {
+    const th = document.createElement("th");
+    th.textContent = training.title || "Schulung";
+    headRow.appendChild(th);
+  });
+
+  thead.appendChild(headRow);
+  table.appendChild(thead);
+
+  const tbody = document.createElement("tbody");
+
+  for (const employee of employees) {
+    const row = document.createElement("tr");
+
+    const employeeCell = document.createElement("td");
+    employeeCell.className = "employee-col";
+    employeeCell.textContent =
+      employee.name ||
+      employee.username ||
+      employee.email ||
+      "Unbekannt";
+    row.appendChild(employeeCell);
+
+    const visibleTrainings = getVisibleTrainingsForProfile(trainings, employee);
+    const visibleTrainingIds = new Set(visibleTrainings.map((training) => training.id));
+
+    const progressEntries = await getProgressEntriesForUser(employee.id);
+    const progressMap = new Map(progressEntries.map((entry) => [entry.trainingId, entry]));
+
+    trainings.forEach((training) => {
+      const td = document.createElement("td");
+
+      if (!visibleTrainingIds.has(training.id)) {
+        td.className = "cell-na";
+        td.textContent = "";
+        row.appendChild(td);
+        return;
+      }
+
+      const entry = progressMap.get(training.id);
+      const isCompleted = entry?.status === "completed" && entry?.completedAt;
+
+      if (isCompleted) {
+        td.className = "cell-done";
+        td.textContent = formatDate(entry.completedAt);
+      } else {
+        td.className = "cell-open";
+        td.textContent = "";
+      }
+
+      row.appendChild(td);
+    });
+
+    tbody.appendChild(row);
+  }
+
+  table.appendChild(tbody);
+}
+
 async function renderSupervisorView(profile) {
   document.getElementById("supervisor-welcome").textContent =
     `Willkommen ${profile.name || ""}. Hier sehen Sie Ihre eigenen Schulungen und den Stand Ihrer Mitarbeiter.`;
@@ -1011,6 +1100,8 @@ async function renderSupervisorView(profile) {
   const trainings = await getAllTrainings();
   const visibleTrainings = getVisibleTrainingsForProfile(trainings, profile);
   const ownProgressEntries = await getProgressEntriesForUser(profile.id);
+
+  await renderSupervisorTrainingMatrix(profile);
 
   visibleTrainings.forEach((training) => {
     const progress = ownProgressEntries.find((entry) => entry.trainingId === training.id);
