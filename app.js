@@ -853,9 +853,12 @@ async function renderAdminProofOverview() {
 
   const usersSnap = await getDocs(collection(db, "users"));
   const users = usersSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
-  const employees = users.filter((user) => user.role === "employee");
+  const usersForProofOverview = users.filter((user) =>
+    ["employee", "supervisor", "admin"].includes(user.role) &&
+    user.active !== false
+  );
 
-  if (employees.length === 0) {
+  if (usersForProofOverview.length === 0) {
     list.appendChild(createInfoCard({
       title: "Keine Mitarbeiter vorhanden",
       lines: ["Aktuell sind keine Mitarbeiterprofile vorhanden."]
@@ -863,7 +866,7 @@ async function renderAdminProofOverview() {
     return;
   }
 
-  for (const employee of employees) {
+  for (const employee of usersForProofOverview) {
     const progressEntries = await getProgressEntriesForUser(employee.id);
     const proofEntries = progressEntries.filter((entry) => entry.proofPath && entry.proofName);
 
