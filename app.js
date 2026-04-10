@@ -1643,6 +1643,7 @@ createUserForm?.addEventListener("submit", async (event) => {
     }
 
     resetUserForm();
+    await loadSupervisorOptions();
     await loadAdminUsers();
   } catch (error) {
     console.error(error);
