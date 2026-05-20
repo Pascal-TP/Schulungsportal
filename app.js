@@ -1342,7 +1342,7 @@ async function createPortalUserFromForm(formData) {
   const idToken = await currentAuthUser.getIdToken();
 
   const response = await fetch(
-    "https://us-central1-kalkpro-4cc29.cloudfunctions.net/createPortalUserHttp",
+    "https://europe-west1-kalkpro-4cc29.cloudfunctions.net/createPortalUserHttp",
     {
       method: "POST",
       headers: {
