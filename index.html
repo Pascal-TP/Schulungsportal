@@ -1,306 +1,263 @@
 <!DOCTYPE html>
+
 <html lang="de">
-
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Schulungsportal</title>
-  <link rel="stylesheet" href="style.css" />
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Schulungsportal</title>
+<link href="style.css" rel="stylesheet"/>
 </head>
-
 <body>
-  <div class="app-shell">
-    <header class="topbar">
-      <div class="portal-brand">
-        <img src="assets/logo.png" alt="TP Holding / NDF / TGA" class="top-logo" />
-        <div class="portal-brand-text">
-          <strong>TP Schulungsportal</strong>
-          <span>Sicherheit & Unterweisung</span>
-        </div>
-      </div>
-      <div class="topbar-right">
-        <span id="user-role-badge" class="role-badge hidden"></span>
-        <button id="change-password-btn" class="secondary-btn hidden">Passwort ändern</button>
-        <button id="logout-btn" class="secondary-btn hidden">Abmelden</button>
-      </div>
-    </header>
+<div class="app-shell">
+<header class="topbar">
+<div class="portal-brand">
+<img alt="TP Holding / NDF / TGA" class="top-logo" src="assets/logo.png"/>
+<div class="portal-brand-text">
+<strong>TP Schulungsportal</strong>
+<span>Sicherheit &amp; Unterweisung</span>
+</div>
+</div><div class="sidebar-main hidden" id="sidebar-main"><div class="sidebar-role-heading"><span class="role-badge hidden" id="user-role-badge"></span></div><nav aria-label="Bereichsnavigation" class="portal-nav" id="portal-nav"></nav></div>
+<div class="topbar-right">
 
-    <main class="main-content">
-      <section id="page-login" class="page active-page">
-        <div class="hero-card login-card">
-          <div class="hero-overlay">
-            <h1>Sicherheitsschulungen für Mitarbeiter</h1>
-            <p>
+<button class="secondary-btn hidden" id="change-password-btn">Passwort ändern</button>
+<button class="secondary-btn hidden" id="logout-btn">Abmelden</button>
+</div>
+</header>
+<main class="main-content">
+<section class="page active-page" id="page-login">
+<div class="hero-card login-card">
+<div class="hero-overlay">
+<h1>Sicherheitsschulungen für Mitarbeiter</h1>
+<p>
               Bitte melden Sie sich mit Ihrer E-Mail-Adresse oder Ihrem Benutzernamen und Ihrem Passwort an.
             </p>
-
-            <form id="login-form" class="form-card">
-              <label for="login-email">E-Mail oder Benutzername</label>
-              <input type="text" id="login-email" placeholder="name@firma.de oder benutzername" required />
-
-              <label for="login-password">Passwort</label>
-              <input type="password" id="login-password" placeholder="Passwort" required />
-
-              <button type="submit" class="primary-btn">Anmelden</button>
-              <button type="button" id="reset-password-btn" class="secondary-btn">Passwort zurücksetzen</button>
-              <button type="button" id="reset-username-password-btn" class="secondary-btn">Passwort vergessen für Nutzer
+<form class="form-card" id="login-form">
+<label for="login-email">E-Mail oder Benutzername</label>
+<input id="login-email" placeholder="name@firma.de oder benutzername" required="" type="text"/>
+<label for="login-password">Passwort</label>
+<input id="login-password" placeholder="Passwort" required="" type="password"/>
+<button class="primary-btn" type="submit">Anmelden</button>
+<button class="secondary-btn" id="reset-password-btn" type="button">Passwort zurücksetzen</button>
+<button class="secondary-btn" id="reset-username-password-btn" type="button">Passwort vergessen für Nutzer
                 ohne E-Mail-Adresse</button>
-              <p id="login-message" class="message-box"></p>
-            </form>
-          </div>
-        </div>
-      </section>
-
-      <section id="page-employee" class="page">
-        <div class="page-header">
-          <h2>Mein Schulungsbereich</h2>
-          <p id="employee-welcome"></p>
-        </div>
-
-        <div class="dashboard-grid">
-          <div class="content-card">
-            <h3>Meine Schulungen</h3>
-            <div id="employee-training-list" class="card-list"></div>
-          </div>
-
-          <div class="content-card">
-            <h3>Mein Bearbeitungsstand</h3>
-            <div id="employee-progress-list" class="card-list"></div>
-          </div>
-        </div>
-      </section>
-
-      <section id="page-supervisor" class="page">
-        <div class="page-header">
-          <h2>Bereich Vorgesetzte</h2>
-          <p id="supervisor-welcome"></p>
-        </div>
-
-        <div class="dashboard-grid">
-          <div class="content-card">
-            <h3>Meine Schulungen</h3>
-            <div id="supervisor-own-training-list" class="card-list"></div>
-          </div>
-
-          <div class="content-card">
-            <h3>Mein Bearbeitungsstand</h3>
-            <div id="supervisor-own-progress-list" class="card-list"></div>
-          </div>
-
-          <div class="content-card">
-            <h3>Meine Mitarbeiter</h3>
-            <div id="supervisor-employee-list" class="card-list"></div>
-          </div>
-
-          <div class="content-card">
-            <h3>Bearbeitungsstand meiner Mitarbeiter</h3>
-            <div id="supervisor-progress-list" class="card-list"></div>
-          </div>
-        </div>
-        <div class="bereiche-legende">
-          <strong>Legende Bereich 1-10:</strong><br>
-          1 = Büromitarbeiter(in)<br>
-          2 = Büromitarbeiter(in) mit Fahrzeug<br>
-          3 = Elektrotechnik<br>
-          4 = Monteure TGA<br>
-          5 = Monteure NDF<br>
-          6 = Mitarbeiter(in) Lager und Logistik<br>
-          7 = Dachdecker(in)<br>
-          8 = Monteure NDF Fußbodentechnik<br>
-          9 = Reinigungskraft<br>
+<p class="message-box" id="login-message"></p>
+</form>
+</div>
+</div>
+</section>
+<section class="page" id="page-employee">
+<div class="page-header compact-page-header">
+<h2>Mein Schulungsbereich</h2>
+<p id="employee-welcome"></p>
+</div>
+<div class="dashboard-grid portal-views"><div class="portal-view dashboard-view active-view" data-view="dashboard"><div class="dashboard-start-card"><h3>Dashboard</h3><p class="dashboard-welcome-copy">Hier finden Sie Ihre persönlichen Schulungen und Ihren aktuellen Bearbeitungsstand.</p><div class="dashboard-start-grid" data-dashboard-links="employee"></div></div></div>
+<div class="content-card portal-view" data-view="my-trainings">
+<h3>Meine Schulungen</h3>
+<div class="card-list" id="employee-training-list"></div>
+</div>
+<div class="content-card portal-view" data-view="my-progress">
+<h3>Mein Bearbeitungsstand</h3>
+<div class="card-list" id="employee-progress-list"></div>
+</div>
+</div>
+</section>
+<section class="page" id="page-supervisor">
+<div class="page-header compact-page-header">
+<h2>Bereich Vorgesetzte</h2>
+<p id="supervisor-welcome"></p>
+</div>
+<div class="dashboard-grid portal-views"><div class="portal-view dashboard-view active-view" data-view="dashboard"><div class="dashboard-start-card"><h3>Dashboard</h3><p class="dashboard-welcome-copy">Von hier erreichen Sie Ihre eigenen Schulungen sowie die Schulungsstände Ihrer zugeordneten Mitarbeiter.</p><div class="dashboard-start-grid" data-dashboard-links="supervisor"></div></div></div>
+<div class="content-card portal-view" data-view="my-trainings">
+<h3>Meine Schulungen</h3>
+<div class="card-list" id="supervisor-own-training-list"></div>
+</div>
+<div class="content-card portal-view" data-view="my-progress">
+<h3>Mein Bearbeitungsstand</h3>
+<div class="card-list" id="supervisor-own-progress-list"></div>
+</div>
+<div class="content-card portal-view" data-view="employees">
+<h3>Meine Mitarbeiter</h3>
+<div class="card-list" id="supervisor-employee-list"></div>
+</div>
+<div class="content-card portal-view" data-view="team-progress">
+<h3>Bearbeitungsstand meiner Mitarbeiter</h3>
+<div class="card-list" id="supervisor-progress-list"></div>
+</div>
+<div class="portal-view" data-view="training-matrix"><div class="bereiche-legende">
+<strong>Legende Bereich 1-10:</strong><br/>
+          1 = Büromitarbeiter(in)<br/>
+          2 = Büromitarbeiter(in) mit Fahrzeug<br/>
+          3 = Elektrotechnik<br/>
+          4 = Monteure TGA<br/>
+          5 = Monteure NDF<br/>
+          6 = Mitarbeiter(in) Lager und Logistik<br/>
+          7 = Dachdecker(in)<br/>
+          8 = Monteure NDF Fußbodentechnik<br/>
+          9 = Reinigungskraft<br/>
           10 = Estrichleger Ulf Roesler
-        </div>
-        <div class="content-card full-span">
-          <h3>Tabellarische Schulungsübersicht meiner Mitarbeiter</h3>
-          <div class="table-wrap">
-            <table id="supervisor-training-matrix" class="training-matrix"></table>
-          </div>
-        </div>
-      </section>
+        </div><div class="content-card matrix-card">
+<h3>Tabellarische Schulungsübersicht meiner Mitarbeiter</h3>
+<div class="table-wrap">
+<table class="training-matrix" id="supervisor-training-matrix"></table>
+</div>
+</div></div></div>
 
-      <section id="page-admin" class="page">
-        <div class="page-header">
-          <h2>Adminbereich</h2>
-          <p id="admin-welcome"></p>
-        </div>
 
-        <div class="dashboard-grid">
-          <div class="content-card">
-            <h3>Meine Schulungen</h3>
-            <div id="admin-own-training-list" class="card-list"></div>
-          </div>
-
-          <div class="content-card">
-            <h3>Mein Bearbeitungsstand</h3>
-            <div id="admin-own-progress-list" class="card-list"></div>
-          </div>
-
-          <div class="content-card">
-            <h3>Nachweise je Mitarbeiter</h3>
-            <div id="admin-proof-overview-list" class="card-list"></div>
-          </div>
-
-          <div class="content-card">
-            <h3>Benutzerverwaltung</h3>
-            <div class="button-stack">
-              <button class="primary-btn" id="btn-load-users">Benutzer laden</button>
-            </div>
-
-            <form id="create-user-form" class="form-card admin-form">
-              <label for="new-user-name">Name</label>
-              <input type="text" id="new-user-name" placeholder="Max Mustermann" required />
-              <input type="hidden" id="edit-user-id" />
-
-              <label for="new-user-login-type">Anmeldetyp</label>
-              <select id="new-user-login-type">
-                <option value="email">Nutzer mit E-Mail-Adresse</option>
-                <option value="username">Nutzer ohne E-Mail-Adresse (Benutzername)</option>
-              </select>
-
-              <div id="email-field-group">
-                <label for="new-user-email">E-Mail</label>
-                <input type="email" id="new-user-email" placeholder="max@firma.de" />
-              </div>
-
-              <div id="username-field-group" class="hidden">
-                <label for="new-user-username">Benutzername</label>
-                <input type="text" id="new-user-username" placeholder="z. B. mueller1" />
-              </div>
-
-              <label for="new-user-password">Start-Passwort</label>
-              <input type="text" id="new-user-password" placeholder="Start1234!" />
-
-              <label for="new-user-role">Rolle</label>
-              <select id="new-user-role" required>
-                <option value="employee">Mitarbeiter</option>
-                <option value="supervisor">Vorgesetzter</option>
-                <option value="admin">Admin</option>
-              </select>
-
-              <label>Bereiche</label>
-              <div id="new-user-bereiche" class="checkbox-grid">
-                <label><input type="checkbox" value="1" /> Bereich 1</label>
-                <label><input type="checkbox" value="2" /> Bereich 2</label>
-                <label><input type="checkbox" value="3" /> Bereich 3</label>
-                <label><input type="checkbox" value="4" /> Bereich 4</label>
-                <label><input type="checkbox" value="5" /> Bereich 5</label>
-                <label><input type="checkbox" value="6" /> Bereich 6</label>
-                <label><input type="checkbox" value="7" /> Bereich 7</label>
-                <label><input type="checkbox" value="8" /> Bereich 8</label>
-                <label><input type="checkbox" value="9" /> Bereich 9</label>
-                <label><input type="checkbox" value="10" /> Bereich 10</label>
-              </div>
-
-              <div class="bereiche-legende">
-                <strong>Legende:</strong><br>
-                1 = Büromitarbeiter(in)<br>
-                2 = Büromitarbeiter(in) mit Fahrzeug<br>
-                3 = Elektrotechnik<br>
-                4 = Monteure TGA<br>
-                5 = Monteure NDF<br>
-                6 = Mitarbeiter(in) Lager und Logistik<br>
-                7 = Dachdecker(in)<br>
-                8 = Monteure NDF Fußbodentechnik<br>
-                9 = Reinigungskraft<br>
+</section>
+<section class="page" id="page-admin">
+<div class="page-header compact-page-header">
+<h2>Adminbereich</h2>
+<p id="admin-welcome"></p>
+</div>
+<div class="dashboard-grid portal-views"><div class="portal-view dashboard-view active-view" data-view="dashboard"><div class="dashboard-start-card"><h3>Dashboard</h3><p class="dashboard-welcome-copy">Willkommen im Adminbereich. Wählen Sie links den gewünschten Bereich des Schulungsportals aus.</p><div class="dashboard-start-grid" data-dashboard-links="admin"></div></div></div>
+<div class="content-card portal-view" data-view="my-trainings">
+<h3>Meine Schulungen</h3>
+<div class="card-list" id="admin-own-training-list"></div>
+</div>
+<div class="content-card portal-view" data-view="my-progress">
+<h3>Mein Bearbeitungsstand</h3>
+<div class="card-list" id="admin-own-progress-list"></div>
+</div>
+<div class="content-card portal-view" data-view="proofs">
+<h3>Nachweise je Mitarbeiter</h3>
+<div class="card-list" id="admin-proof-overview-list"></div>
+</div>
+<div class="content-card portal-view" data-view="users">
+<h3>Benutzerverwaltung</h3>
+<div class="button-stack">
+<button class="primary-btn" id="btn-load-users">Benutzer laden</button>
+</div>
+<form class="form-card admin-form" id="create-user-form">
+<label for="new-user-name">Name</label>
+<input id="new-user-name" placeholder="Max Mustermann" required="" type="text"/>
+<input id="edit-user-id" type="hidden"/>
+<label for="new-user-login-type">Anmeldetyp</label>
+<select id="new-user-login-type">
+<option value="email">Nutzer mit E-Mail-Adresse</option>
+<option value="username">Nutzer ohne E-Mail-Adresse (Benutzername)</option>
+</select>
+<div id="email-field-group">
+<label for="new-user-email">E-Mail</label>
+<input id="new-user-email" placeholder="max@firma.de" type="email"/>
+</div>
+<div class="hidden" id="username-field-group">
+<label for="new-user-username">Benutzername</label>
+<input id="new-user-username" placeholder="z. B. mueller1" type="text"/>
+</div>
+<label for="new-user-password">Start-Passwort</label>
+<input id="new-user-password" placeholder="Start1234!" type="text"/>
+<label for="new-user-role">Rolle</label>
+<select id="new-user-role" required="">
+<option value="employee">Mitarbeiter</option>
+<option value="supervisor">Vorgesetzter</option>
+<option value="admin">Admin</option>
+</select>
+<label>Bereiche</label>
+<div class="checkbox-grid" id="new-user-bereiche">
+<label><input type="checkbox" value="1"/> Bereich 1</label>
+<label><input type="checkbox" value="2"/> Bereich 2</label>
+<label><input type="checkbox" value="3"/> Bereich 3</label>
+<label><input type="checkbox" value="4"/> Bereich 4</label>
+<label><input type="checkbox" value="5"/> Bereich 5</label>
+<label><input type="checkbox" value="6"/> Bereich 6</label>
+<label><input type="checkbox" value="7"/> Bereich 7</label>
+<label><input type="checkbox" value="8"/> Bereich 8</label>
+<label><input type="checkbox" value="9"/> Bereich 9</label>
+<label><input type="checkbox" value="10"/> Bereich 10</label>
+</div>
+<div class="bereiche-legende">
+<strong>Legende:</strong><br/>
+                1 = Büromitarbeiter(in)<br/>
+                2 = Büromitarbeiter(in) mit Fahrzeug<br/>
+                3 = Elektrotechnik<br/>
+                4 = Monteure TGA<br/>
+                5 = Monteure NDF<br/>
+                6 = Mitarbeiter(in) Lager und Logistik<br/>
+                7 = Dachdecker(in)<br/>
+                8 = Monteure NDF Fußbodentechnik<br/>
+                9 = Reinigungskraft<br/>
                 10 = Estrichleger Ulf Roesler
               </div>
+<div>
+<label>Individuelle Schulungen</label>
+<div id="new-user-extra-trainings"></div>
+</div>
+<label for="new-user-supervisor">Vorgesetzter</label>
+<select id="new-user-supervisor">
+<option value="">Kein Vorgesetzter</option>
+</select>
+<label for="new-user-start">Startdatum</label>
+<input id="new-user-start" type="date"/>
+<label for="new-user-end">Enddatum</label>
+<input id="new-user-end" type="date"/>
+<label for="new-user-active">Status</label>
+<select id="new-user-active">
+<option value="true">aktiv</option>
+<option value="false">inaktiv</option>
+</select>
+<button class="primary-btn" id="save-user-btn" type="submit">Benutzer anlegen</button>
+<button class="secondary-btn" id="cancel-user-edit-btn" type="button">Bearbeitung abbrechen</button>
+<p class="message-box" id="create-user-message"></p>
+</form>
+<div class="card-list" id="admin-user-list"></div>
 
-              <div>
-                <label>Individuelle Schulungen</label>
-                <div id="new-user-extra-trainings"></div>
-              </div>
-
-              <label for="new-user-supervisor">Vorgesetzter</label>
-              <select id="new-user-supervisor">
-                <option value="">Kein Vorgesetzter</option>
-              </select>
-
-              <label for="new-user-start">Startdatum</label>
-              <input type="date" id="new-user-start" />
-
-              <label for="new-user-end">Enddatum</label>
-              <input type="date" id="new-user-end" />
-
-              <label for="new-user-active">Status</label>
-              <select id="new-user-active">
-                <option value="true">aktiv</option>
-                <option value="false">inaktiv</option>
-              </select>
-
-              <button type="submit" class="primary-btn" id="save-user-btn">Benutzer anlegen</button>
-              <button type="button" class="secondary-btn" id="cancel-user-edit-btn">Bearbeitung abbrechen</button>
-              <p id="create-user-message" class="message-box"></p>
-            </form>
-
-            <div id="admin-user-list" class="card-list"></div>
-
-            <div class="content-card">
-              <h3>Schulungsverwaltung</h3>
-              <div class="button-stack">
-                <button class="primary-btn" id="btn-load-trainings">Schulungen laden</button>
-              </div>
-
-              <form id="create-training-form" class="form-card admin-form">
-                <label for="new-training-title">Titel</label>
-                <input type="hidden" id="edit-training-id" />
-                <input type="text" id="new-training-title" placeholder="Datenschutz" required />
-
-                <label for="new-training-url">Link zur Schulung</label>
-                <input type="url" id="new-training-url" placeholder="https://pascal-tp.github.io/Schulung1/" required />
-
-                <label>Bereiche</label>
-                <div id="new-training-bereiche" class="checkbox-grid">
-                  <label><input type="checkbox" value="1" /> Bereich 1</label>
-                  <label><input type="checkbox" value="2" /> Bereich 2</label>
-                  <label><input type="checkbox" value="3" /> Bereich 3</label>
-                  <label><input type="checkbox" value="4" /> Bereich 4</label>
-                  <label><input type="checkbox" value="5" /> Bereich 5</label>
-                  <label><input type="checkbox" value="6" /> Bereich 6</label>
-                  <label><input type="checkbox" value="7" /> Bereich 7</label>
-                  <label><input type="checkbox" value="8" /> Bereich 8</label>
-                  <label><input type="checkbox" value="9" /> Bereich 9</label>
-                  <label><input type="checkbox" value="10" /> Bereich 10</label>
-                </div>
-
-                <div class="bereiche-legende">
-                  <strong>Legende:</strong><br>
-                  1 = Büromitarbeiter(in)<br>
-                  2 = Büromitarbeiter(in) mit Fahrzeug<br>
-                  3 = Elektrotechnik<br>
-                  4 = Monteure TGA<br>
-                  5 = Monteure NDF<br>
-                  6 = Mitarbeiter(in) Lager und Logistik<br>
-                  7 = Dachdecker(in)<br>
-                  8 = Monteure NDF Fußbodentechnik<br>
-                  9 = Reinigungskraft<br>
+</div><div class="content-card portal-view" data-view="training-management">
+<h3>Schulungsverwaltung</h3>
+<div class="button-stack">
+<button class="primary-btn" id="btn-load-trainings">Schulungen laden</button>
+</div>
+<form class="form-card admin-form" id="create-training-form">
+<label for="new-training-title">Titel</label>
+<input id="edit-training-id" type="hidden"/>
+<input id="new-training-title" placeholder="Datenschutz" required="" type="text"/>
+<label for="new-training-url">Link zur Schulung</label>
+<input id="new-training-url" placeholder="https://pascal-tp.github.io/Schulung1/" required="" type="url"/>
+<label>Bereiche</label>
+<div class="checkbox-grid" id="new-training-bereiche">
+<label><input type="checkbox" value="1"/> Bereich 1</label>
+<label><input type="checkbox" value="2"/> Bereich 2</label>
+<label><input type="checkbox" value="3"/> Bereich 3</label>
+<label><input type="checkbox" value="4"/> Bereich 4</label>
+<label><input type="checkbox" value="5"/> Bereich 5</label>
+<label><input type="checkbox" value="6"/> Bereich 6</label>
+<label><input type="checkbox" value="7"/> Bereich 7</label>
+<label><input type="checkbox" value="8"/> Bereich 8</label>
+<label><input type="checkbox" value="9"/> Bereich 9</label>
+<label><input type="checkbox" value="10"/> Bereich 10</label>
+</div>
+<div class="bereiche-legende">
+<strong>Legende:</strong><br/>
+                  1 = Büromitarbeiter(in)<br/>
+                  2 = Büromitarbeiter(in) mit Fahrzeug<br/>
+                  3 = Elektrotechnik<br/>
+                  4 = Monteure TGA<br/>
+                  5 = Monteure NDF<br/>
+                  6 = Mitarbeiter(in) Lager und Logistik<br/>
+                  7 = Dachdecker(in)<br/>
+                  8 = Monteure NDF Fußbodentechnik<br/>
+                  9 = Reinigungskraft<br/>
                   10 = Estrichleger Ulf Roesler
                 </div>
-
-                <label for="new-training-active">Status</label>
-                <select id="new-training-active">
-                  <option value="true">aktiv</option>
-                  <option value="false">inaktiv</option>
-                </select>
-
-                <button type="submit" class="primary-btn" id="save-training-btn">Schulung anlegen</button>
-                <button type="button" class="secondary-btn" id="cancel-training-edit-btn">Bearbeitung abbrechen</button>
-                <p id="create-training-message" class="message-box"></p>
-              </form>
-
-              <div id="admin-training-list" class="card-list"></div>
-            </div>
-          </div>
-          <div class="content-card full-span">
-            <h3>Tabellarische Schulungsübersicht</h3>
-            <div class="table-wrap">
-              <table id="admin-training-matrix" class="training-matrix"></table>
-            </div>
-          </div>
-      </section>
-    </main>
-  </div>
-
-  <script type="module" src="app.js"></script>
-</body>
-
+<label for="new-training-active">Status</label>
+<select id="new-training-active">
+<option value="true">aktiv</option>
+<option value="false">inaktiv</option>
+</select>
+<button class="primary-btn" id="save-training-btn" type="submit">Schulung anlegen</button>
+<button class="secondary-btn" id="cancel-training-edit-btn" type="button">Bearbeitung abbrechen</button>
+<p class="message-box" id="create-training-message"></p>
+</form>
+<div class="card-list" id="admin-training-list"></div>
+</div>
+<div class="content-card portal-view" data-view="training-matrix">
+<h3>Tabellarische Schulungsübersicht</h3>
+<div class="table-wrap">
+<table class="training-matrix" id="admin-training-matrix"></table>
+</div>
+</div>
+</div></section>
+</main>
+</div>
+<script src="app.js" type="module"></script>
+<script src="portal-nav.js"></script></body>
 </html>
