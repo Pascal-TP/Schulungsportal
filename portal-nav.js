@@ -30,6 +30,45 @@
 
   let currentPageId = null;
 
+  function activateManagementSubview(group, target, options = {}) {
+    const page = document.getElementById('page-admin');
+    if (!page) return;
+
+    const navHolder = page.querySelector(`[data-management-nav="${group}"]`);
+    if (!navHolder) return;
+
+    navHolder.querySelectorAll('.management-choice-card').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.managementTarget === target);
+    });
+
+    const prefix = group === 'users' ? 'users-' : 'trainings-';
+    page.querySelectorAll(`[data-management-view^="${prefix}"]`).forEach(view => {
+      view.classList.toggle('active', view.dataset.managementView === target);
+    });
+
+    if (target === 'users-list') {
+      document.getElementById('btn-load-users')?.click();
+    } else if (target === 'trainings-list') {
+      document.getElementById('btn-load-trainings')?.click();
+    } else if (target === 'users-create' && options.reset !== false) {
+      document.getElementById('cancel-user-edit-btn')?.click();
+    } else if (target === 'trainings-create' && options.reset !== false) {
+      document.getElementById('cancel-training-edit-btn')?.click();
+    }
+  }
+
+  function initializeManagementNavigation() {
+    document.querySelectorAll('[data-management-nav]').forEach(holder => {
+      if (holder.dataset.navReady === '1') return;
+      holder.querySelectorAll('.management-choice-card').forEach(btn => {
+        btn.addEventListener('click', () => {
+          activateManagementSubview(holder.dataset.managementNav, btn.dataset.managementTarget);
+        });
+      });
+      holder.dataset.navReady = '1';
+    });
+  }
+
   function showView(view) {
     if (!currentPageId) return;
     const page = document.getElementById(currentPageId);
@@ -42,6 +81,13 @@
       btn.classList.toggle('active', active);
       btn.setAttribute('aria-current', active ? 'page' : 'false');
     });
+
+    if (currentPageId === 'page-admin' && view === 'users') {
+      activateManagementSubview('users', 'users-list', { reset: false });
+    }
+    if (currentPageId === 'page-admin' && view === 'training-management') {
+      activateManagementSubview('trainings', 'trainings-list', { reset: false });
+    }
   }
 
   function buildDashboardLinks(pageId) {
@@ -90,9 +136,23 @@
     if (id !== currentPageId) activateForPage(id);
   }
 
+  // Wenn aus der Anzeigen-Liste „Bearbeiten“ gewählt wird, direkt das passende Formular öffnen.
+  document.addEventListener('click', (event) => {
+    const button = event.target.closest('button');
+    if (!button || button.textContent.trim() !== 'Bearbeiten') return;
+
+    if (button.closest('#admin-user-list')) {
+      setTimeout(() => activateManagementSubview('users', 'users-create', { reset: false }), 0);
+    } else if (button.closest('#admin-training-list')) {
+      setTimeout(() => activateManagementSubview('trainings', 'trainings-create', { reset: false }), 0);
+    }
+  });
+
   const observer = new MutationObserver(syncActivePage);
   document.querySelectorAll('.page').forEach(page => {
     observer.observe(page, { attributes: true, attributeFilter: ['class'] });
   });
+
+  initializeManagementNavigation();
   syncActivePage();
 })();

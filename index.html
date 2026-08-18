@@ -124,9 +124,20 @@
 </div>
 <div class="content-card portal-view" data-view="users">
 <h3>Benutzerverwaltung</h3>
-<div class="button-stack">
-<button class="primary-btn" id="btn-load-users">Benutzer laden</button>
+<p class="management-intro">Wählen Sie, ob Sie vorhandene Benutzer anzeigen und bearbeiten oder einen neuen Benutzer anlegen möchten.</p>
+<div class="management-choice-grid" data-management-nav="users">
+<button class="management-choice-card active" data-management-target="users-list" type="button">
+<span>Benutzer anzeigen</span><small>Vorhandene Benutzer anzeigen, bearbeiten oder löschen</small>
+</button>
+<button class="management-choice-card" data-management-target="users-create" type="button">
+<span>Benutzer anlegen</span><small>Neues Benutzerkonto mit Rolle und Bereichen anlegen</small>
+</button>
 </div>
+<div class="management-subview active" data-management-view="users-list">
+<button class="hidden" id="btn-load-users" type="button">Benutzer laden</button>
+<div class="card-list" id="admin-user-list"></div>
+</div>
+<div class="management-subview" data-management-view="users-create">
 <form class="form-card admin-form" id="create-user-form">
 <label for="new-user-name">Name</label>
 <input id="new-user-name" placeholder="Max Mustermann" required="" type="text"/>
@@ -199,13 +210,23 @@
 <button class="secondary-btn" id="cancel-user-edit-btn" type="button">Bearbeitung abbrechen</button>
 <p class="message-box" id="create-user-message"></p>
 </form>
-<div class="card-list" id="admin-user-list"></div>
-
+</div>
 </div><div class="content-card portal-view" data-view="training-management">
 <h3>Schulungsverwaltung</h3>
-<div class="button-stack">
-<button class="primary-btn" id="btn-load-trainings">Schulungen laden</button>
+<p class="management-intro">Wählen Sie, ob Sie vorhandene Schulungen anzeigen und bearbeiten oder eine neue Schulung anlegen möchten.</p>
+<div class="management-choice-grid" data-management-nav="trainings">
+<button class="management-choice-card active" data-management-target="trainings-list" type="button">
+<span>Schulungen anzeigen</span><small>Vorhandene Schulungen anzeigen, bearbeiten oder löschen</small>
+</button>
+<button class="management-choice-card" data-management-target="trainings-create" type="button">
+<span>Schulung anlegen</span><small>Neue Schulung mit Link und Bereichszuordnung anlegen</small>
+</button>
 </div>
+<div class="management-subview active" data-management-view="trainings-list">
+<button class="hidden" id="btn-load-trainings" type="button">Schulungen laden</button>
+<div class="card-list" id="admin-training-list"></div>
+</div>
+<div class="management-subview" data-management-view="trainings-create">
 <form class="form-card admin-form" id="create-training-form">
 <label for="new-training-title">Titel</label>
 <input id="edit-training-id" type="hidden"/>
@@ -247,7 +268,7 @@
 <button class="secondary-btn" id="cancel-training-edit-btn" type="button">Bearbeitung abbrechen</button>
 <p class="message-box" id="create-training-message"></p>
 </form>
-<div class="card-list" id="admin-training-list"></div>
+</div>
 </div>
 <div class="content-card portal-view" data-view="training-matrix">
 <h3>Tabellarische Schulungsübersicht</h3>

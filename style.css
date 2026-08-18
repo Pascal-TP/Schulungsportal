@@ -640,3 +640,70 @@ img { max-width: 100%; display: block; }
     font-size: .72rem;
   }
 }
+
+/* Verwaltungsbereiche: klare Trennung zwischen Anzeigen und Anlegen */
+.management-intro {
+  margin: -2px 0 16px;
+  color: var(--muted);
+  font-size: .86rem;
+  line-height: 1.55;
+}
+
+.management-choice-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.management-choice-card {
+  min-height: 112px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #f8fafc;
+  color: var(--primary);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color .15s ease, box-shadow .15s ease, background .15s ease, transform .08s ease;
+}
+
+.management-choice-card:hover {
+  transform: translateY(-1px);
+  border-color: #c7d5e4;
+  background: #fff;
+  box-shadow: 0 7px 20px rgba(22,40,61,.07);
+}
+
+.management-choice-card.active {
+  border-color: var(--primary);
+  background: #eef3f8;
+  box-shadow: inset 0 0 0 1px var(--primary);
+}
+
+.management-choice-card span {
+  font-size: 1rem;
+  font-weight: 760;
+  line-height: 1.25;
+}
+
+.management-choice-card small {
+  color: var(--muted);
+  font-size: .75rem;
+  line-height: 1.45;
+}
+
+.management-subview { display: none; }
+.management-subview.active { display: block; }
+
+.management-subview .form-card { margin-top: 0; }
+.management-subview .card-list { margin-top: 0; }
+
+@media (max-width: 760px) {
+  .management-choice-grid { grid-template-columns: 1fr; }
+  .management-choice-card { min-height: 90px; }
+}
